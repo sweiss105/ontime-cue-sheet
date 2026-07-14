@@ -71,7 +71,7 @@
     <aside>
       <section class="section">
         <h2>Stage connection</h2>
-        <div class="field"><label for="base_url">Ontime stage URL</label><input type="url" id="base_url" name="base_url" value="{{ base_url }}" placeholder="https://your-stage.example.com" required></div>
+        <div class="field"><label for="base_url">Ontime stage or share URL</label><input type="url" id="base_url" name="base_url" value="{{ base_url }}" placeholder="https://your-stage.example.com" required><small>For a password-protected stage, paste an authenticated Companion share link.</small></div>
         <button class="secondary" id="test-button" type="button">Test connection</button>
         <div class="status" id="connection-status" data-state="idle"><span class="status-dot"></span><div><strong>Not connected</strong><br><span>Enter your hosted Ontime stage URL.</span></div></div>
       </section>
@@ -110,7 +110,7 @@
     function setStatus(state, heading, detail) {
       statusEl.dataset.state = state;
       statusEl.querySelector('strong').textContent = heading;
-      statusEl.querySelector('span').textContent = detail;
+      statusEl.querySelector(':scope > div span').textContent = detail;
     }
     function escapeHtml(value='') { const d=document.createElement('div'); d.textContent=String(value); return d.innerHTML; }
     function render(events) {

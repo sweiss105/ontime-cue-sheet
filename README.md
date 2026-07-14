@@ -4,7 +4,7 @@ A small web app that reads the current rundown from an Ontime stage and renders 
 
 ## Status
 
-This is an early MVP. It uses Ontime's documented read-only `GET /data/rundowns/current` endpoint. Ontime Cloud login uses TOTP, but the public documentation does not currently specify a machine-to-machine Cloud API authentication flow. The client therefore supports an optional authorization header supplied through environment variables; credentials are never entered into or embedded in the PDF.
+This is an early MVP. It uses Ontime's documented read-only `GET /data/rundowns/current` endpoint. For a password-protected Cloud stage, generate an authenticated Companion share link in Ontime and paste that complete URL into the app. Its `token` query parameter is preserved when the rundown endpoint is requested; credentials are never embedded in the PDF.
 
 ## Run locally
 
@@ -36,12 +36,14 @@ Copy `.env.example` to `.env` for local configuration.
 
 Do not commit `.env` or credentials.
 
+### Password-protected Ontime Cloud stages
+
+In Ontime, open `Editor` → `Settings` → `Sharing and reporting` → `Share link`. Select `Companion`, enable `Authenticate`, create the share link, and paste the complete generated URL into this app.
+
 ## What to validate next
 
-1. Confirm the exact hosted stage URL and whether `/data/rundowns/current` is accessible to a logged-out read-only client.
-2. If Cloud protects the endpoint, confirm the supported service authentication mechanism with Ontime.
-3. Capture a real current-rundown response as a sanitized fixture and lock down the response model.
-4. Decide which standard and custom fields belong on the production cue sheet.
+1. Capture a real current-rundown response as a sanitized fixture and lock down the response model.
+2. Decide which standard and custom fields belong on the production cue sheet.
 
 ## References
 
@@ -49,4 +51,3 @@ Do not commit `.env` or credentials.
 - [Ontime HTTP API](https://docs.getontime.no/api/protocols/http/)
 - [Ontime event data](https://docs.getontime.no/api/data/event-data/)
 - [Ontime Cloud login](https://docs.getontime.no/ontime-cloud/tips/login-with-auth/)
-

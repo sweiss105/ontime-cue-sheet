@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
 
 class OntimeError(RuntimeError):
     pass
+
+
+def build_rundown_url(base_url: str) -> str:
+    """Append the data endpoint without losing an authenticated share-link token."""
+    parsed = urlsplit(base_url.strip())
+    path = f"{parsed.path.rstrip('/')}/data/rundowns/current"
+    return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
 
 
 def _unwrap_payload(data: Any) -> Any:
@@ -43,14 +51,20 @@ async def fetch_current_rundown(
     headers = {}
     if auth_header and auth_value:
         headers[auth_header] = auth_value
-    url = f"{base_url.rstrip('/')}/data/rundowns/current"
+    url = build_rundown_url(base_url)
     try:
         async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
             response = await client.get(url, headers=headers)
+            if response.status_code == 401:
+                raise OntimeError(
+                    "Ontime rejected the connection. For a password-protected stage, paste an "
+                    "authenticated Companion share link from Ontime's Sharing and reporting settings."
+                )
             response.raise_for_status()
             if "application/json" not in response.headers.get("content-type", ""):
                 raise OntimeError("Ontime returned a non-JSON response; check the stage URL and login requirements")
             return extract_events(response.json())
+    except OntimeError:
+        raise
     except httpx.HTTPError as exc:
         raise OntimeError(f"Could not read the Ontime rundown: {exc}") from exc
-
