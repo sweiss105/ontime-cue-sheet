@@ -20,13 +20,13 @@ def test_extract_events_from_payload():
 
 def test_authenticated_share_link_preserves_token():
     assert build_rundown_url("https://stage.example.com?token=secret") == (
-        "https://stage.example.com/data/rundowns/current?token=secret"
+        "https://stage.example.com/data/rundowns/current/?token=secret"
     )
 
 
 def test_cloud_prefix_is_preserved():
     assert build_rundown_url("https://cloud.example.com/my-stage/?token=secret") == (
-        "https://cloud.example.com/my-stage/data/rundowns/current?token=secret"
+        "https://cloud.example.com/my-stage/data/rundowns/current/?token=secret"
     )
 
 

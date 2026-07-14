@@ -13,7 +13,7 @@ class OntimeError(RuntimeError):
 def build_rundown_url(base_url: str) -> str:
     """Append the data endpoint without losing an authenticated share-link token."""
     parsed = urlsplit(base_url.strip())
-    path = f"{parsed.path.rstrip('/')}/data/rundowns/current"
+    path = f"{parsed.path.rstrip('/')}/data/rundowns/current/"
     return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
 
 
@@ -53,7 +53,7 @@ async def fetch_current_rundown(
         headers[auth_header] = auth_value
     url = build_rundown_url(base_url)
     try:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
             response = await client.get(url, headers=headers)
             if response.status_code == 401:
                 raise OntimeError(
