@@ -25,3 +25,6 @@ def test_clock_formats_milliseconds():
 def test_render_pdf_has_pdf_signature():
     assert render_pdf([EVENT], "Show Cue Sheet").startswith(b"%PDF")
 
+
+def test_render_pdf_supports_a4_portrait():
+    assert render_pdf([EVENT], "Show Cue Sheet", "A4", "portrait").startswith(b"%PDF")

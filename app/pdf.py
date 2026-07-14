@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from weasyprint import HTML
+from weasyprint import CSS, HTML
 
 TEMPLATES = Path(__file__).parent / "templates"
 env = Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html"]))
@@ -24,11 +24,18 @@ def clock(value: Any) -> str:
 env.filters["clock"] = clock
 
 
-def render_pdf(events: list[dict[str, Any]], title: str) -> bytes:
+def render_pdf(
+    events: list[dict[str, Any]],
+    title: str,
+    paper_size: str = "Letter",
+    orientation: str = "landscape",
+) -> bytes:
     html = env.get_template("cue_sheet.html").render(
         events=events,
         title=title.strip() or "Cue Sheet",
         generated_at=datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
     )
-    return HTML(string=html, base_url=str(TEMPLATES)).write_pdf()
-
+    page_css = f"@page {{ size: {paper_size} {orientation}; }}"
+    return HTML(string=html, base_url=str(TEMPLATES)).write_pdf(
+        stylesheets=[CSS(string=page_css)]
+    )
