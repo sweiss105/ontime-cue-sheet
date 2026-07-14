@@ -1,0 +1,21 @@
+[project]
+name = "ontime-cue-sheet"
+version = "0.1.0"
+description = "Generate printable PDF cue sheets from an Ontime rundown."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.28,<1",
+  "jinja2>=3.1,<4",
+  "python-multipart>=0.0.20,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "weasyprint>=65,<67",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9", "respx>=0.22,<1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

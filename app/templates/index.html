@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ontime Cue Sheet</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    body { margin: 0; background: #101214; color: #f4f4f1; }
+    main { max-width: 680px; margin: 12vh auto; padding: 32px; }
+    .eyebrow { color: #9da3a6; text-transform: uppercase; letter-spacing: .14em; font-size: 12px; }
+    h1 { font-size: clamp(40px, 8vw, 72px); line-height: .95; margin: 12px 0 20px; }
+    p { color: #b8bdc0; line-height: 1.6; }
+    form { display: grid; gap: 18px; margin-top: 36px; }
+    label { display: grid; gap: 8px; font-weight: 650; }
+    input { border: 1px solid #353a3d; border-radius: 10px; background: #181b1d; color: inherit; padding: 14px; font: inherit; }
+    button { border: 0; border-radius: 10px; background: #d9ff57; color: #151713; padding: 15px 18px; font: inherit; font-weight: 800; cursor: pointer; }
+    .error { color: #ffb4aa; border-left: 3px solid #ff6f61; padding-left: 12px; }
+  </style>
+</head>
+<body><main>
+  <div class="eyebrow">Production paperwork</div>
+  <h1>Ontime<br>to paper.</h1>
+  <p>Pull the current rundown from your hosted Ontime stage and generate a clean, printable PDF cue sheet.</p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  <form method="post" action="/generate">
+    <label>Ontime stage URL<input type="url" name="base_url" value="{{ base_url }}" placeholder="https://your-stage.example.com" required></label>
+    <label>Document title<input type="text" name="title" value="Cue Sheet"></label>
+    <button type="submit">Generate PDF</button>
+  </form>
+</main></body>
+</html>
+
