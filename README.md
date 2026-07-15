@@ -1,6 +1,6 @@
 # Ontime Cue Sheet
 
-A small web app that reads the current rundown from an Ontime stage and renders a printable PDF cue sheet with WeasyPrint.
+A small Python/FastAPI web app that reads the current rundown from an Ontime stage and renders a printable PDF cue sheet with WeasyPrint.
 
 After importing cues, the app uses the Ontime project title for the cue-sheet header, lists every discovered custom field, and lets the user choose and drag the optional PDF fields into their desired column order. Cue notes can be included directly beneath each title in smaller italic text. If project metadata is unavailable, the current rundown title is used as a fallback. Cue, Start, Duration, and Title remain fixed on the left; Cue, Start, and Duration stay compact while the remaining columns size themselves from their content. Cue text is black, with the event colour applied to the row background at 15% opacity and a 5% white overlay on alternating rows for easier scanning. PDFs use quarter-inch page margins. The browser preview measures the selected columns and wrapped row content so each sheet fills before the next page begins; long PDFs repeat the column headers on every page. Every generated sheet carries a local-time version code in the lower-right footer and uses the same value in filenames such as `Project Name-CUESHEET-20260715-1310.pdf`.
 
@@ -58,11 +58,13 @@ In Ontime, open `Editor` → `Settings` → `Sharing and reporting` → `Share l
 
 1. Capture a real current-rundown response as a sanitized fixture and lock down the response model.
 
-## License and attribution
+## License
 
-Ontime Cue Sheet is licensed under the [Apache License 2.0](LICENSE). It may be used, modified, and distributed for personal or commercial purposes under the terms of that license.
+Ontime Cue Sheet is licensed under the [Zero-Clause BSD license](LICENSE), identified by the SPDX expression `0BSD`. Anyone may use, copy, modify, or distribute the software for any purpose, with or without a fee and without an attribution requirement.
 
-Redistributions must retain the license and applicable copyright and attribution notices, including the contents of [NOTICE](NOTICE). Modified files must carry prominent notices stating that they were changed.
+Attribution to [Steve Weiss](AUTHORS.md) is appreciated but not required. The software is provided "AS IS," without warranty, and the author disclaims liability as stated in the license.
+
+WeasyPrint and the project's other dependencies remain under their respective licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution and licensing details.
 
 ## AI-assisted development disclaimer
 

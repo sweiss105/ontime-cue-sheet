@@ -1,7 +1,9 @@
 # Copyright 2026 Steve Weiss
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: 0BSD
 
+import tomllib
 from io import BytesIO
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from pypdf import PdfReader
@@ -29,6 +31,18 @@ EVENT = {
     "colour": "#339E4E",
     "custom": {"Audio": "Walk-in playlist", "Video": "Holding slide"},
 }
+
+
+def test_project_uses_0bsd_and_documents_weasyprint_license():
+    root = Path(__file__).parents[1]
+    project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    license_text = (root / "LICENSE").read_text()
+    third_party = (root / "THIRD_PARTY_NOTICES.md").read_text()
+
+    assert project["license"] == "0BSD"
+    assert "weasyprint>=69,<70" in project["dependencies"]
+    assert 'THE SOFTWARE IS PROVIDED "AS IS"' in license_text
+    assert all(value in third_party for value in ("WeasyPrint", "BSD 3-Clause"))
 
 
 def test_extract_events_from_payload():
