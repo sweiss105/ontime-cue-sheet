@@ -4,7 +4,14 @@ from fastapi.testclient import TestClient
 from pypdf import PdfReader
 
 from app.main import app
-from app.ontime import build_project_url, build_rundown_url, extract_events, extract_rundown
+from app.ontime import (
+    OntimeError,
+    build_project_url,
+    build_rundown_url,
+    extract_events,
+    extract_rundown,
+    validate_ontime_url,
+)
 from app.pdf import clock, cue_colour, cue_tint, env, render_pdf
 
 
@@ -82,6 +89,28 @@ def test_project_url_preserves_cloud_prefix_and_token():
     assert build_project_url("https://cloud.example.com/my-stage/?token=secret") == (
         "https://cloud.example.com/my-stage/data/project/?token=secret"
     )
+
+
+def test_public_importer_accepts_ontime_cloud_share_urls():
+    validate_ontime_url("https://cloud.getontime.no/my-stage?token=secret")
+
+
+def test_public_importer_rejects_non_ontime_and_unsafe_urls():
+    unsafe_urls = [
+        "http://cloud.getontime.no/my-stage",
+        "https://cloud.getontime.no.evil.example/my-stage",
+        "https://user:password@cloud.getontime.no/my-stage",
+        "https://cloud.getontime.no:8443/my-stage",
+        "https://cloud.getontime.no/my-stage#fragment",
+        "https://cloud.getontime.no/",
+    ]
+
+    for unsafe_url in unsafe_urls:
+        try:
+            validate_ontime_url(unsafe_url)
+        except OntimeError:
+            continue
+        raise AssertionError(f"Expected URL to be rejected: {unsafe_url}")
 
 
 def test_clock_formats_milliseconds():

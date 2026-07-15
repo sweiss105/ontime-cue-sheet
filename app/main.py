@@ -106,8 +106,7 @@ async def generate(
             selected_fields=safe_fields,
         )
     except OntimeError as exc:
-        html = templates.get_template("index.html").render(base_url=base_url, error=str(exc))
-        return HTMLResponse(html, status_code=502)
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=502)
     filename = "cue-sheet.pdf"
     return Response(
         pdf,

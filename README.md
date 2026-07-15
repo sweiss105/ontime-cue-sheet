@@ -6,7 +6,7 @@ After importing cues, the app uses the Ontime project title for the cue-sheet he
 
 ## Status
 
-This is an early MVP. It uses Ontime's documented read-only `GET /data/rundowns/current` endpoint. For a password-protected Cloud stage, generate an authenticated Companion share link in Ontime and paste that complete URL into the app. Its `token` query parameter is preserved when the rundown endpoint is requested; credentials are never embedded in the PDF.
+This is an early MVP. It uses Ontime's documented read-only `GET /data/rundowns/current` endpoint. The public importer accepts HTTPS stage and Companion share URLs from `cloud.getontime.no`. For a password-protected Cloud stage, generate an authenticated Companion share link in Ontime and paste that complete URL into the app. Its `token` query parameter is preserved when the rundown endpoint is requested; credentials are never embedded in the PDF or included in upstream error messages.
 
 ## Run locally
 
@@ -27,6 +27,18 @@ Or run the container:
 docker build -t ontime-cue-sheet .
 docker run --rm -p 8000:8000 --env-file .env ontime-cue-sheet
 ```
+
+## Deploy to Vercel
+
+The Vercel deployment uses `Dockerfile.vercel` so WeasyPrint's native Pango and font dependencies are installed in the runtime image. The server reads Vercel's `PORT` environment variable automatically.
+
+```sh
+vercel login
+vercel link
+vercel deploy
+```
+
+Use the generated Vercel URL to verify the homepage, `/health`, live cue import, and PDF generation before assigning a custom domain. Do not store an authenticated Ontime Companion URL in Vercel environment variables.
 
 ## Configuration
 
