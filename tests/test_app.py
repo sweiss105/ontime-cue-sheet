@@ -91,7 +91,7 @@ def test_pdf_rows_use_black_text_with_colour_tint():
         selected_custom_fields=[],
     )
 
-    assert 'style="color:#171717; background-color:rgba(51, 158, 78, 0.15)"' in html
+    assert 'style="color:#000000; background-color:rgba(51, 158, 78, 0.15)"' in html
     assert 'style="color:#339E4E;' not in html
 
 
@@ -134,7 +134,7 @@ def test_index_includes_multipage_preview_controls():
     assert 'data-testid="page-select"' in html
     assert 'data-testid="next-page"' in html
     assert "events.slice(pageStart,pageStart+PREVIEW_PAGE_SIZE)" in html
-    assert 'style="color:#17191a;background-color:${cueTint(colour)}"' in html
+    assert 'style="color:#000000;background-color:${cueTint(colour)}"' in html
     assert 'style="color:${colour};background-color:' not in html
 
 

@@ -156,7 +156,7 @@
       const headers=['Cue','Start','Duration','Title',...(includeNotes?['Notes']:[]),...customFields];
       theadRow.innerHTML=headers.map((header,index)=>`<th class="${['col-cue','col-time','col-duration','col-title'][index]||''}">${escapeHtml(header)}</th>`).join('');
       tbody.innerHTML=pageEvents.map(e=>{
-        const colour=cueColour(e.colour); const style=colour?` style="color:#17191a;background-color:${cueTint(colour)}"`:'';
+        const colour=cueColour(e.colour); const style=colour?` style="color:#000000;background-color:${cueTint(colour)}"`:'';
         const extra=[...(includeNotes?[e.note||'']:[]),...customFields.map(field=>e.custom?.[field]||'')];
         return `<tr${style}><td>${escapeHtml(e.cue||'—')}</td><td>${clock(e.timeStart)}</td><td>${clock(e.duration)}</td><td><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td>${escapeHtml(value)}</td>`).join('')}</tr>`;
       }).join('');
