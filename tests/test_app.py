@@ -175,7 +175,10 @@ def test_index_includes_multipage_preview_controls():
     assert 'data-testid="previous-page"' in html
     assert 'data-testid="page-select"' in html
     assert 'data-testid="next-page"' in html
-    assert "events.slice(pageStart,pageStart+PREVIEW_PAGE_SIZE)" in html
+    assert "const PREVIEW_PAGE_SIZE" not in html
+    assert "function paginateEvents(events)" in html
+    assert "usedHeight+rowHeight>availableTableHeight" in html
+    assert "table.tHead.getBoundingClientRect().height" in html
     assert 'style="color:#000000;background-color:${cueTint(colour)}"' in html
     assert 'style="color:${colour};background-color:' not in html
 

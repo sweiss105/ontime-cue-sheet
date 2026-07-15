@@ -59,12 +59,13 @@
     .page-nav button:disabled { color:#9da2a4; background:#f2f4f4; cursor:not-allowed; }
     .page-nav select { width:auto; min-width:116px; min-height:38px; padding:7px 32px 7px 10px; font-weight:700; }
     .canvas { min-height:690px; padding:34px; display:grid; place-items:center; background:#e4e7e7; border:1px solid #d4d8d9; overflow:auto; }
-    .paper { width:min(100%,1050px); min-width:760px; aspect-ratio:11/8.5; padding:24px; background:var(--paper); border:1px solid #8c9193; box-shadow:0 8px 24px rgba(22,25,26,.13); align-self:start; }
+    .paper { width:min(100%,1050px); min-width:760px; aspect-ratio:11/8.5; padding:24px; overflow:hidden; background:var(--paper); border:1px solid #8c9193; box-shadow:0 8px 24px rgba(22,25,26,.13); align-self:start; }
     .paper.portrait { width:min(76%,760px); min-width:620px; aspect-ratio:8.5/11; }
     .paper-head { display:flex; justify-content:space-between; align-items:end; padding-bottom:16px; border-bottom:2px solid var(--ink); }
     .paper-title { font-size:24px; font-weight:800; letter-spacing:-.03em; }
     .paper-count { color:var(--muted); font-size:12px; }
     table { width:100%; border-collapse:collapse; table-layout:auto; font-size:12px; }
+    table.paginated { table-layout:fixed; }
     th { padding:12px 8px 9px; text-align:left; border-bottom:1px solid #868b8d; overflow-wrap:normal; font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
     td { padding:8px; vertical-align:top; border-bottom:1px solid #d9ddde; overflow-wrap:anywhere; }
     .col-cue, .col-time, .col-duration { width:1%; padding-left:5px; padding-right:5px; white-space:nowrap; }
@@ -123,9 +124,11 @@
     const previousPageButton = document.querySelector('#previous-page');
     const nextPageButton = document.querySelector('#next-page');
     const pageSelect = document.querySelector('#page-select');
-    const PREVIEW_PAGE_SIZE = 12;
     let lastEvents = [];
     let currentPage = 0;
+    let previewPages = [];
+    let previewColumnWidths = [];
+    let resizeFrame = 0;
 
     function clock(ms) { const s=Math.floor((Number(ms)||0)/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), r=s%60; return [h,m,r].map(v=>String(v).padStart(2,'0')).join(':'); }
     function showToast(message) { toast.textContent=message; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),3200); }
@@ -145,29 +148,83 @@
       customFieldOptions.innerHTML=fields.map(field=>`<label class="check"><input type="checkbox" name="selected_custom_fields" value="${escapeHtml(field)}"${!firstLoad&&previous.has(field)?' checked':''}>${escapeHtml(field)}</label>`).join('');
       fieldPicker.hidden=false;
     }
-    function render(events, resetPage=false) {
-      lastEvents=events;
-      const totalPages=Math.max(1,Math.ceil(events.length/PREVIEW_PAGE_SIZE));
-      currentPage=resetPage?0:Math.min(currentPage,totalPages-1);
-      const pageStart=currentPage*PREVIEW_PAGE_SIZE;
-      const pageEvents=events.slice(pageStart,pageStart+PREVIEW_PAGE_SIZE);
+    function previewHeaders() {
       const includeNotes=document.querySelector('#include_notes').checked;
       const customFields=selectedCustomFields();
-      const headers=['Cue','Start','Duration','Title',...(includeNotes?['Notes']:[]),...customFields];
-      theadRow.innerHTML=headers.map((header,index)=>`<th class="${['col-cue','col-time','col-duration','col-title'][index]||'col-content'}">${escapeHtml(header)}</th>`).join('');
-      tbody.innerHTML=pageEvents.map(e=>{
-        const colour=cueColour(e.colour); const style=colour?` style="color:#000000;background-color:${cueTint(colour)}"`:'';
-        const extra=[...(includeNotes?[e.note||'']:[]),...customFields.map(field=>e.custom?.[field]||'')];
-        return `<tr${style}><td class="col-cue">${escapeHtml(e.cue||'—')}</td><td class="col-time">${clock(e.timeStart)}</td><td class="col-duration">${clock(e.duration)}</td><td class="col-title"><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td class="col-content">${escapeHtml(value)}</td>`).join('')}</tr>`;
-      }).join('');
-      empty.hidden=events.length>0; table.hidden=events.length===0;
-      pageNav.hidden=events.length===0||totalPages===1;
+      return ['Cue','Start','Duration','Title',...(includeNotes?['Notes']:[]),...customFields];
+    }
+    function eventRow(e) {
+      const includeNotes=document.querySelector('#include_notes').checked;
+      const customFields=selectedCustomFields();
+      const colour=cueColour(e.colour); const style=colour?` style="color:#000000;background-color:${cueTint(colour)}"`:'';
+      const extra=[...(includeNotes?[e.note||'']:[]),...customFields.map(field=>e.custom?.[field]||'')];
+      return `<tr${style}><td class="col-cue">${escapeHtml(e.cue||'—')}</td><td class="col-time">${clock(e.timeStart)}</td><td class="col-duration">${clock(e.duration)}</td><td class="col-title"><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td class="col-content">${escapeHtml(value)}</td>`).join('')}</tr>`;
+    }
+    function setColumnWidths(widths=[]) {
+      table.querySelector('colgroup')?.remove();
+      table.classList.toggle('paginated',widths.length>0);
+      if(!widths.length) return;
+      const colgroup=document.createElement('colgroup');
+      colgroup.innerHTML=widths.map(width=>`<col style="width:${width.toFixed(4)}%">`).join('');
+      table.prepend(colgroup);
+    }
+    function paginateEvents(events) {
+      const paperStyle=getComputedStyle(paper);
+      const paperContentHeight=paper.clientHeight-parseFloat(paperStyle.paddingTop)-parseFloat(paperStyle.paddingBottom);
+      const availableTableHeight=paperContentHeight-paper.querySelector('.paper-head').getBoundingClientRect().height;
+      const headerHeight=table.tHead.getBoundingClientRect().height;
+      const pages=[];
+      let page=[];
+      let usedHeight=headerHeight;
+      [...tbody.rows].forEach((row,index)=>{
+        const rowHeight=row.getBoundingClientRect().height;
+        if(page.length&&usedHeight+rowHeight>availableTableHeight+.5) {
+          pages.push(page);
+          page=[];
+          usedHeight=headerHeight;
+        }
+        page.push(events[index]);
+        usedHeight+=rowHeight;
+      });
+      if(page.length) pages.push(page);
+      return pages;
+    }
+    function renderPage() {
+      const totalPages=Math.max(1,previewPages.length);
+      const pageEvents=previewPages[currentPage]||[];
+      setColumnWidths(previewColumnWidths);
+      tbody.innerHTML=pageEvents.map(eventRow).join('');
+      pageNav.hidden=lastEvents.length===0||totalPages===1;
       pageSelect.innerHTML=Array.from({length:totalPages},(_,index)=>`<option value="${index}">Page ${index+1} of ${totalPages}</option>`).join('');
       pageSelect.value=String(currentPage);
       previousPageButton.disabled=currentPage===0;
       nextPageButton.disabled=currentPage===totalPages-1;
-      document.querySelector('#paper-count').textContent=events.length?`${events.length} cue${events.length===1?'':'s'} · Page ${currentPage+1} of ${totalPages}`:'Preview';
-      document.querySelector('#preview-meta').textContent=events.length?`${events.length} cues loaded`:'No cues in rundown';
+      document.querySelector('#paper-count').textContent=lastEvents.length?`${lastEvents.length} cue${lastEvents.length===1?'':'s'} · Page ${currentPage+1} of ${totalPages}`:'Preview';
+      document.querySelector('#preview-meta').textContent=lastEvents.length?`${lastEvents.length} cues loaded`:'No cues in rundown';
+    }
+    function render(events, resetPage=false) {
+      lastEvents=events;
+      const headers=previewHeaders();
+      theadRow.innerHTML=headers.map((header,index)=>`<th class="${['col-cue','col-time','col-duration','col-title'][index]||'col-content'}">${escapeHtml(header)}</th>`).join('');
+      empty.hidden=events.length>0; table.hidden=events.length===0;
+      if(!events.length) {
+        previewPages=[];
+        previewColumnWidths=[];
+        currentPage=0;
+        renderPage();
+        return;
+      }
+      setColumnWidths();
+      tbody.innerHTML=events.map(eventRow).join('');
+      const tableWidth=table.getBoundingClientRect().width;
+      previewColumnWidths=[...theadRow.cells].map(cell=>cell.getBoundingClientRect().width/tableWidth*100);
+      previewPages=paginateEvents(events);
+      currentPage=resetPage?0:Math.min(currentPage,previewPages.length-1);
+      renderPage();
+    }
+    function schedulePagination() {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame=requestAnimationFrame(()=>{ if(lastEvents.length) render(lastEvents); });
     }
     function buildData() { return new FormData(form); }
     async function loadPreview() {
@@ -178,13 +235,14 @@
       return data;
     }
     testButton.addEventListener('click', async()=>{ if(!form.reportValidity()) return; setBusy(true); setStatus('idle','Connecting…','Reading the current rundown.'); try { const data=await loadPreview(); setStatus('success','Connected',`${data.events.length} cues available · checked ${new Date().toLocaleTimeString()}`); } catch(error) { setStatus('error','Connection failed',error.message); showToast(error.message); } finally { setBusy(false); } });
-    title.addEventListener('input',()=>document.querySelector('#paper-title').textContent=title.value||'Cue Sheet');
+    title.addEventListener('input',()=>{ document.querySelector('#paper-title').textContent=title.value||'Cue Sheet'; schedulePagination(); });
     fieldPicker.addEventListener('change',()=>render(lastEvents));
-    previousPageButton.addEventListener('click',()=>{ if(currentPage>0) { currentPage-=1; render(lastEvents); } });
-    nextPageButton.addEventListener('click',()=>{ if((currentPage+1)*PREVIEW_PAGE_SIZE<lastEvents.length) { currentPage+=1; render(lastEvents); } });
-    pageSelect.addEventListener('change',()=>{ currentPage=Number(pageSelect.value); render(lastEvents); });
-    document.querySelectorAll('input[name="orientation"]').forEach(el=>el.addEventListener('change',()=>paper.classList.toggle('portrait',el.value==='portrait'&&el.checked)));
+    previousPageButton.addEventListener('click',()=>{ if(currentPage>0) { currentPage-=1; renderPage(); } });
+    nextPageButton.addEventListener('click',()=>{ if(currentPage<previewPages.length-1) { currentPage+=1; renderPage(); } });
+    pageSelect.addEventListener('change',()=>{ currentPage=Number(pageSelect.value); renderPage(); });
+    document.querySelectorAll('input[name="orientation"]').forEach(el=>el.addEventListener('change',()=>{ paper.classList.toggle('portrait',el.value==='portrait'&&el.checked); schedulePagination(); }));
     document.querySelector('#include_skipped').addEventListener('change',()=>{ if(lastEvents.length) testButton.click(); });
+    new ResizeObserver(schedulePagination).observe(paper);
     form.addEventListener('submit',async event=>{ event.preventDefault(); if(!form.reportValidity()) return; setBusy(true); try { const response=await fetch('/generate',{method:'POST',body:buildData()}); if(!response.ok) throw new Error('PDF generation failed'); const blob=await response.blob(); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='cue-sheet.pdf'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); showToast('PDF cue sheet generated.'); } catch(error) { showToast(error.message); } finally { setBusy(false); } });
   </script>
 </body>
