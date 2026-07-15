@@ -58,6 +58,16 @@ In Ontime, open `Editor` → `Settings` → `Sharing and reporting` → `Share l
 
 1. Capture a real current-rundown response as a sanitized fixture and lock down the response model.
 
+## License and attribution
+
+Ontime Cue Sheet is licensed under the [Apache License 2.0](LICENSE). It may be used, modified, and distributed for personal or commercial purposes under the terms of that license.
+
+Redistributions must retain the license and applicable copyright and attribution notices, including the contents of [NOTICE](NOTICE). Modified files must carry prominent notices stating that they were changed.
+
+## AI-assisted development disclaimer
+
+This project was developed with assistance from generative AI, including OpenAI Codex. No independent human source-code review or security audit has been performed. Automated tests and functional checks do not replace human review; users should review and test the software before relying on it. See [DISCLAIMER.md](DISCLAIMER.md) for the complete notice.
+
 ## References
 
 - [Ontime documentation](https://docs.getontime.no/ontime/)
