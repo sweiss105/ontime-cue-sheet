@@ -117,6 +117,16 @@ def test_pdf_and_preview_use_content_aware_columns():
     assert 'td class="col-duration"' in index_html
 
 
+def test_pdf_and_preview_overlay_alternating_rows():
+    pdf_template, _, _ = env.loader.get_source(env, "cue_sheet.html")
+    index_html = TestClient(app).get("/").text
+
+    assert "tbody tr:nth-child(even) td { background-color: rgba(0, 0, 0, 0.05); }" in pdf_template
+    assert "tbody tr:nth-child(even) td { background-color:rgba(0,0,0,.05); }" in index_html
+    assert "tbody td:nth-child(even)" not in pdf_template
+    assert "tbody td:nth-child(even)" not in index_html
+
+
 def test_cue_colour_and_tint_are_print_safe():
     assert cue_colour("#339e4e") == "#339E4E"
     assert cue_tint("#339E4E") == "rgba(51, 158, 78, 0.15)"
