@@ -41,7 +41,7 @@
     <tbody>
     {% for event in events %}
       {% set row_colour = event.colour|cue_colour %}
-      <tr{% if event.skip %} class="skipped"{% endif %}{% if row_colour %} style="color:{{ row_colour }}; background-color:{{ row_colour|cue_tint }}"{% endif %}>
+      <tr{% if event.skip %} class="skipped"{% endif %}{% if row_colour %} style="color:#171717; background-color:{{ row_colour|cue_tint }}"{% endif %}>
         <td class="cue">{{ event.cue or "—" }}</td>
         <td class="time">{{ event.timeStart|clock }}</td>
         <td class="duration">{{ event.duration|clock }}</td>

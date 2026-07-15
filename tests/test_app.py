@@ -5,7 +5,7 @@ from pypdf import PdfReader
 
 from app.main import app
 from app.ontime import build_rundown_url, extract_events, extract_rundown
-from app.pdf import clock, cue_colour, cue_tint, render_pdf
+from app.pdf import clock, cue_colour, cue_tint, env, render_pdf
 
 
 EVENT = {
@@ -82,6 +82,19 @@ def test_cue_colour_and_tint_are_print_safe():
     assert cue_colour("not-a-colour") == ""
 
 
+def test_pdf_rows_use_black_text_with_colour_tint():
+    html = env.get_template("cue_sheet.html").render(
+        events=[EVENT],
+        title="Colour test",
+        generated_at="",
+        include_notes=True,
+        selected_custom_fields=[],
+    )
+
+    assert 'style="color:#171717; background-color:rgba(51, 158, 78, 0.15)"' in html
+    assert 'style="color:#339E4E;' not in html
+
+
 def test_pdf_only_contains_selected_custom_fields():
     page = PdfReader(
         BytesIO(
@@ -121,6 +134,8 @@ def test_index_includes_multipage_preview_controls():
     assert 'data-testid="page-select"' in html
     assert 'data-testid="next-page"' in html
     assert "events.slice(pageStart,pageStart+PREVIEW_PAGE_SIZE)" in html
+    assert 'style="color:#17191a;background-color:${cueTint(colour)}"' in html
+    assert 'style="color:${colour};background-color:' not in html
 
 
 def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
