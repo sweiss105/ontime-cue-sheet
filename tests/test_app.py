@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from pypdf import PdfReader
 
 from app.main import app
-from app.ontime import build_rundown_url, extract_events, extract_rundown
+from app.ontime import build_project_url, build_rundown_url, extract_events, extract_rundown
 from app.pdf import clock, cue_colour, cue_tint, env, render_pdf
 
 
@@ -42,10 +42,24 @@ def test_extract_rundown_metadata_and_custom_fields():
             "title": "Fall Kick Off 2026",
             "flatOrder": ["evt-1"],
             "entries": {"evt-1": EVENT},
+        },
+        {"title": "WCTC Underestimated to Unstoppable"},
+    )
+    assert rundown["title"] == "WCTC Underestimated to Unstoppable"
+    assert rundown["rundown_title"] == "Fall Kick Off 2026"
+    assert rundown["custom_fields"] == ["Audio", "Video"]
+
+
+def test_rundown_title_is_used_when_project_title_is_unavailable():
+    rundown = extract_rundown(
+        {
+            "title": "Fall Kick Off 2026",
+            "flatOrder": ["evt-1"],
+            "entries": {"evt-1": EVENT},
         }
     )
+
     assert rundown["title"] == "Fall Kick Off 2026"
-    assert rundown["custom_fields"] == ["Audio", "Video"]
 
 
 def test_empty_normalized_rundown_is_valid():
@@ -61,6 +75,12 @@ def test_authenticated_share_link_preserves_token():
 def test_cloud_prefix_is_preserved():
     assert build_rundown_url("https://cloud.example.com/my-stage/?token=secret") == (
         "https://cloud.example.com/my-stage/data/rundowns/current/?token=secret"
+    )
+
+
+def test_project_url_preserves_cloud_prefix_and_token():
+    assert build_project_url("https://cloud.example.com/my-stage/?token=secret") == (
+        "https://cloud.example.com/my-stage/data/project/?token=secret"
     )
 
 
@@ -119,10 +139,11 @@ def test_pdf_only_contains_selected_custom_fields():
     assert "AUDIO" not in text and "Walk-in playlist" not in text
 
 
-def test_preview_returns_ontime_title_and_available_fields(monkeypatch):
+def test_preview_returns_ontime_project_title_and_available_fields(monkeypatch):
     async def fake_rundown(_base_url):
         return {
-            "title": "Fall Kick Off 2026",
+            "title": "WCTC Underestimated to Unstoppable",
+            "rundown_title": "Fall Kick Off 2026",
             "events": [EVENT],
             "custom_fields": ["Audio", "Video"],
         }
@@ -131,7 +152,7 @@ def test_preview_returns_ontime_title_and_available_fields(monkeypatch):
     response = TestClient(app).post("/preview", data={"base_url": "https://example.com"})
 
     assert response.status_code == 200
-    assert response.json()["title"] == "Fall Kick Off 2026"
+    assert response.json()["title"] == "WCTC Underestimated to Unstoppable"
     assert response.json()["custom_fields"] == ["Audio", "Video"]
 
 
@@ -150,7 +171,8 @@ def test_index_includes_multipage_preview_controls():
 def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
     async def fake_rundown(_base_url):
         return {
-            "title": "Fall Kick Off 2026",
+            "title": "WCTC Underestimated to Unstoppable",
+            "rundown_title": "Fall Kick Off 2026",
             "events": [EVENT],
             "custom_fields": ["Audio", "Video"],
         }

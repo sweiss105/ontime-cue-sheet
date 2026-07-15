@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any, TypedDict
 from urllib.parse import urlsplit, urlunsplit
 
@@ -12,15 +13,24 @@ class OntimeError(RuntimeError):
 
 class RundownData(TypedDict):
     title: str
+    rundown_title: str
     events: list[dict[str, Any]]
     custom_fields: list[str]
 
 
-def build_rundown_url(base_url: str) -> str:
-    """Append the data endpoint without losing an authenticated share-link token."""
+def build_data_url(base_url: str, resource: str) -> str:
+    """Append an Ontime data endpoint without losing an authenticated share-link token."""
     parsed = urlsplit(base_url.strip())
-    path = f"{parsed.path.rstrip('/')}/data/rundowns/current/"
+    path = f"{parsed.path.rstrip('/')}/data/{resource.strip('/')}/"
     return urlunsplit((parsed.scheme, parsed.netloc, path, parsed.query, ""))
+
+
+def build_rundown_url(base_url: str) -> str:
+    return build_data_url(base_url, "rundowns/current")
+
+
+def build_project_url(base_url: str) -> str:
+    return build_data_url(base_url, "project")
 
 
 def _unwrap_payload(data: Any) -> Any:
@@ -61,11 +71,19 @@ def extract_events(data: Any) -> list[dict[str, Any]]:
     raise OntimeError("No events were found in the current rundown")
 
 
-def extract_rundown(data: Any) -> RundownData:
+def extract_project_title(data: Any) -> str:
+    unwrapped = _unwrap_payload(data)
+    if not isinstance(unwrapped, dict):
+        return ""
+    return str(unwrapped.get("title") or "").strip()
+
+
+def extract_rundown(data: Any, project_data: Any = None) -> RundownData:
     """Extract printable rundown metadata while preserving event and field order."""
     unwrapped = _unwrap_payload(data)
     events = extract_events(unwrapped)
-    title = unwrapped.get("title", "") if isinstance(unwrapped, dict) else ""
+    rundown_title = str(unwrapped.get("title") or "").strip() if isinstance(unwrapped, dict) else ""
+    title = extract_project_title(project_data) or rundown_title
     custom_fields: list[str] = []
     for event in events:
         custom = event.get("custom")
@@ -74,7 +92,12 @@ def extract_rundown(data: Any) -> RundownData:
         for field in custom:
             if field not in custom_fields:
                 custom_fields.append(field)
-    return {"title": str(title), "events": events, "custom_fields": custom_fields}
+    return {
+        "title": title,
+        "rundown_title": rundown_title,
+        "events": events,
+        "custom_fields": custom_fields,
+    }
 
 
 async def fetch_current_rundown(
@@ -85,19 +108,36 @@ async def fetch_current_rundown(
     headers = {}
     if auth_header and auth_value:
         headers[auth_header] = auth_value
-    url = build_rundown_url(base_url)
+    rundown_url = build_rundown_url(base_url)
+    project_url = build_project_url(base_url)
     try:
         async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
-            response = await client.get(url, headers=headers)
-            if response.status_code == 401:
+            rundown_result, project_result = await asyncio.gather(
+                client.get(rundown_url, headers=headers),
+                client.get(project_url, headers=headers),
+                return_exceptions=True,
+            )
+            if isinstance(rundown_result, Exception):
+                raise rundown_result
+            if rundown_result.status_code == 401:
                 raise OntimeError(
                     "Ontime rejected the connection. For a password-protected stage, paste an "
                     "authenticated Companion share link from Ontime's Sharing and reporting settings."
                 )
-            response.raise_for_status()
-            if "application/json" not in response.headers.get("content-type", ""):
+            rundown_result.raise_for_status()
+            if "application/json" not in rundown_result.headers.get("content-type", ""):
                 raise OntimeError("Ontime returned a non-JSON response; check the stage URL and login requirements")
-            return extract_rundown(response.json())
+            project_data = None
+            if (
+                isinstance(project_result, httpx.Response)
+                and project_result.is_success
+                and "application/json" in project_result.headers.get("content-type", "")
+            ):
+                try:
+                    project_data = project_result.json()
+                except ValueError:
+                    project_data = None
+            return extract_rundown(rundown_result.json(), project_data)
     except OntimeError:
         raise
     except httpx.HTTPError as exc:

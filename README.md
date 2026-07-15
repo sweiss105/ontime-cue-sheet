@@ -2,7 +2,7 @@
 
 A small web app that reads the current rundown from an Ontime stage and renders a printable PDF cue sheet with WeasyPrint.
 
-After connecting, the app uses the Ontime rundown title, lists every discovered custom field, and lets the user choose which columns appear in the PDF. Cue text is black, with the event colour applied to the row background at 15% opacity. PDFs use quarter-inch page margins. Long rundowns can be paged through in the browser preview and flow across PDF pages with column headers repeated on each page.
+After connecting, the app uses the Ontime project title for the cue-sheet header, lists every discovered custom field, and lets the user choose which columns appear in the PDF. If project metadata is unavailable, the current rundown title is used as a fallback. Cue text is black, with the event colour applied to the row background at 15% opacity. PDFs use quarter-inch page margins. Long rundowns can be paged through in the browser preview and flow across PDF pages with column headers repeated on each page.
 
 ## Status
 
