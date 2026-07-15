@@ -9,7 +9,7 @@
     header { display: flex; justify-content: space-between; align-items: end; border-bottom: 2px solid #171717; padding-bottom: 9px; margin-bottom: 12px; }
     h1 { margin: 0; font-size: 22pt; letter-spacing: -.03em; white-space: nowrap; }
     .meta { text-align: right; color: #555; font-size: 8pt; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    table { width: 100%; border-collapse: collapse; table-layout: auto; }
     /* WeasyPrint repeats table-header groups at the top of every printed page. */
     thead { display: table-header-group; break-inside: avoid; }
     tbody { display: table-row-group; }
@@ -17,6 +17,7 @@
     th { background: #1d2326; color: white; text-align: left; text-transform: uppercase; letter-spacing: .05em; font-size: 7pt; padding: 7px 6px; }
     td { border-bottom: 1px solid #cfd3d5; padding: 7px 6px; vertical-align: top; overflow-wrap: anywhere; }
     tbody tr:nth-child(even) { background: #f2f4f4; }
+    .cue, .time, .duration { width: 1%; padding-left: 4px; padding-right: 4px; white-space: nowrap; }
     .cue { font-weight: bold; }
     .time, .duration { font-variant-numeric: tabular-nums; }
     .title { font-weight: 650; }
@@ -29,14 +30,6 @@
 <body>
   <header><h1>{{ title }}</h1><div class="meta">Generated {{ generated_at }}<br>{{ events|length }} cues</div></header>
   <table>
-    {% set extra_count = selected_custom_fields|length + (1 if include_notes else 0) %}
-    {% set extra_width = (49 / extra_count) if extra_count else 0 %}
-    <colgroup>
-      <col style="width:8%"><col style="width:10%"><col style="width:9%">
-      <col style="width:{{ 24 if extra_count else 73 }}%">
-      {% if include_notes %}<col style="width:{{ extra_width }}%">{% endif %}
-      {% for field in selected_custom_fields %}<col style="width:{{ extra_width }}%">{% endfor %}
-    </colgroup>
     <thead><tr><th class="cue">Cue</th><th class="time">Start</th><th class="duration">Duration</th><th class="title">Title</th>{% if include_notes %}<th>Notes</th>{% endif %}{% for field in selected_custom_fields %}<th>{{ field }}</th>{% endfor %}</tr></thead>
     <tbody>
     {% for event in events %}

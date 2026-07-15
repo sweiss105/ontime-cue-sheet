@@ -64,10 +64,10 @@
     .paper-head { display:flex; justify-content:space-between; align-items:end; padding-bottom:16px; border-bottom:2px solid var(--ink); }
     .paper-title { font-size:24px; font-weight:800; letter-spacing:-.03em; }
     .paper-count { color:var(--muted); font-size:12px; }
-    table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px; }
-    th { padding:12px 8px 9px; text-align:left; border-bottom:1px solid #868b8d; font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
-    td { height:42px; padding:8px; vertical-align:top; border-bottom:1px solid #d9ddde; overflow:hidden; text-overflow:ellipsis; }
-    .col-cue { width:9%; } .col-time { width:12%; } .col-duration { width:12%; } .col-title { width:25%; } .col-note { width:42%; }
+    table { width:100%; border-collapse:collapse; table-layout:auto; font-size:12px; }
+    th { padding:12px 8px 9px; text-align:left; border-bottom:1px solid #868b8d; overflow-wrap:normal; font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+    td { padding:8px; vertical-align:top; border-bottom:1px solid #d9ddde; overflow-wrap:anywhere; }
+    .col-cue, .col-time, .col-duration { width:1%; padding-left:5px; padding-right:5px; white-space:nowrap; }
     .empty { height:470px; display:grid; place-items:center; text-align:center; color:var(--muted); }
     .empty strong { display:block; margin-bottom:8px; color:var(--ink); font-size:17px; }
     .loading { opacity:.48; }
@@ -154,11 +154,11 @@
       const includeNotes=document.querySelector('#include_notes').checked;
       const customFields=selectedCustomFields();
       const headers=['Cue','Start','Duration','Title',...(includeNotes?['Notes']:[]),...customFields];
-      theadRow.innerHTML=headers.map((header,index)=>`<th class="${['col-cue','col-time','col-duration','col-title'][index]||''}">${escapeHtml(header)}</th>`).join('');
+      theadRow.innerHTML=headers.map((header,index)=>`<th class="${['col-cue','col-time','col-duration','col-title'][index]||'col-content'}">${escapeHtml(header)}</th>`).join('');
       tbody.innerHTML=pageEvents.map(e=>{
         const colour=cueColour(e.colour); const style=colour?` style="color:#000000;background-color:${cueTint(colour)}"`:'';
         const extra=[...(includeNotes?[e.note||'']:[]),...customFields.map(field=>e.custom?.[field]||'')];
-        return `<tr${style}><td>${escapeHtml(e.cue||'—')}</td><td>${clock(e.timeStart)}</td><td>${clock(e.duration)}</td><td><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td>${escapeHtml(value)}</td>`).join('')}</tr>`;
+        return `<tr${style}><td class="col-cue">${escapeHtml(e.cue||'—')}</td><td class="col-time">${clock(e.timeStart)}</td><td class="col-duration">${clock(e.duration)}</td><td class="col-title"><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td class="col-content">${escapeHtml(value)}</td>`).join('')}</tr>`;
       }).join('');
       empty.hidden=events.length>0; table.hidden=events.length===0;
       pageNav.hidden=events.length===0||totalPages===1;
