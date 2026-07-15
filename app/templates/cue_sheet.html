@@ -7,7 +7,7 @@
     * { box-sizing: border-box; }
     body { font-family: Arial, Helvetica, sans-serif; color: #171717; font-size: 8.5pt; }
     header { display: flex; justify-content: space-between; align-items: end; border-bottom: 2px solid #171717; padding-bottom: 9px; margin-bottom: 12px; }
-    h1 { margin: 0; font-size: 22pt; letter-spacing: -.03em; }
+    h1 { margin: 0; font-size: 22pt; letter-spacing: -.03em; white-space: nowrap; }
     .meta { text-align: right; color: #555; font-size: 8pt; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     /* WeasyPrint repeats table-header groups at the top of every printed page. */
@@ -17,12 +17,9 @@
     th { background: #1d2326; color: white; text-align: left; text-transform: uppercase; letter-spacing: .05em; font-size: 7pt; padding: 7px 6px; }
     td { border-bottom: 1px solid #cfd3d5; padding: 7px 6px; vertical-align: top; overflow-wrap: anywhere; }
     tbody tr:nth-child(even) { background: #f2f4f4; }
-    .cue { width: 8%; font-weight: bold; }
-    .time { width: 10%; font-variant-numeric: tabular-nums; }
-    .duration { width: 9%; font-variant-numeric: tabular-nums; }
-    .title { width: 24%; font-weight: 650; }
-    .note { width: 27%; }
-    .custom { width: 22%; }
+    .cue { font-weight: bold; }
+    .time, .duration { font-variant-numeric: tabular-nums; }
+    .title { font-weight: 650; }
     .skipped { opacity: .48; text-decoration: line-through; }
     dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 6px; }
     dt { font-weight: bold; }
@@ -32,16 +29,25 @@
 <body>
   <header><h1>{{ title }}</h1><div class="meta">Generated {{ generated_at }}<br>{{ events|length }} cues</div></header>
   <table>
-    <thead><tr><th class="cue">Cue</th><th class="time">Start</th><th class="duration">Duration</th><th class="title">Title</th><th class="note">Notes</th><th class="custom">Custom fields</th></tr></thead>
+    {% set extra_count = selected_custom_fields|length + (1 if include_notes else 0) %}
+    {% set extra_width = (49 / extra_count) if extra_count else 0 %}
+    <colgroup>
+      <col style="width:8%"><col style="width:10%"><col style="width:9%">
+      <col style="width:{{ 24 if extra_count else 73 }}%">
+      {% if include_notes %}<col style="width:{{ extra_width }}%">{% endif %}
+      {% for field in selected_custom_fields %}<col style="width:{{ extra_width }}%">{% endfor %}
+    </colgroup>
+    <thead><tr><th class="cue">Cue</th><th class="time">Start</th><th class="duration">Duration</th><th class="title">Title</th>{% if include_notes %}<th>Notes</th>{% endif %}{% for field in selected_custom_fields %}<th>{{ field }}</th>{% endfor %}</tr></thead>
     <tbody>
     {% for event in events %}
-      <tr{% if event.skip %} class="skipped"{% endif %}>
+      {% set row_colour = event.colour|cue_colour %}
+      <tr{% if event.skip %} class="skipped"{% endif %}{% if row_colour %} style="color:{{ row_colour }}; background-color:{{ row_colour|cue_tint }}"{% endif %}>
         <td class="cue">{{ event.cue or "—" }}</td>
         <td class="time">{{ event.timeStart|clock }}</td>
         <td class="duration">{{ event.duration|clock }}</td>
         <td class="title">{{ event.title }}</td>
-        <td class="note">{{ event.note }}</td>
-        <td class="custom">{% if event.custom %}<dl>{% for key, value in event.custom.items() %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>{% endif %}</td>
+        {% if include_notes %}<td>{{ event.note }}</td>{% endif %}
+        {% for field in selected_custom_fields %}<td>{{ event.custom.get(field, "") if event.custom else "" }}</td>{% endfor %}
       </tr>
     {% endfor %}
     </tbody>

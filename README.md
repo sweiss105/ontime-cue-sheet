@@ -2,6 +2,8 @@
 
 A small web app that reads the current rundown from an Ontime stage and renders a printable PDF cue sheet with WeasyPrint.
 
+After connecting, the app uses the Ontime rundown title, lists every discovered custom field, and lets the user choose which columns appear in the PDF. Cue text uses the event colour, with the same colour applied to the row background at 15% opacity. Long rundowns flow across pages with column headers repeated on each page.
+
 ## Status
 
 This is an early MVP. It uses Ontime's documented read-only `GET /data/rundowns/current` endpoint. For a password-protected Cloud stage, generate an authenticated Companion share link in Ontime and paste that complete URL into the app. Its `token` query parameter is preserved when the rundown endpoint is requested; credentials are never embedded in the PDF.
@@ -43,7 +45,6 @@ In Ontime, open `Editor` → `Settings` → `Sharing and reporting` → `Share l
 ## What to validate next
 
 1. Capture a real current-rundown response as a sanitized fixture and lock down the response model.
-2. Decide which standard and custom fields belong on the production cue sheet.
 
 ## References
 

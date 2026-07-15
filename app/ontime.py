@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypedDict
 from urllib.parse import urlsplit, urlunsplit
 
 import httpx
@@ -8,6 +8,12 @@ import httpx
 
 class OntimeError(RuntimeError):
     pass
+
+
+class RundownData(TypedDict):
+    title: str
+    events: list[dict[str, Any]]
+    custom_fields: list[str]
 
 
 def build_rundown_url(base_url: str) -> str:
@@ -55,11 +61,27 @@ def extract_events(data: Any) -> list[dict[str, Any]]:
     raise OntimeError("No events were found in the current rundown")
 
 
+def extract_rundown(data: Any) -> RundownData:
+    """Extract printable rundown metadata while preserving event and field order."""
+    unwrapped = _unwrap_payload(data)
+    events = extract_events(unwrapped)
+    title = unwrapped.get("title", "") if isinstance(unwrapped, dict) else ""
+    custom_fields: list[str] = []
+    for event in events:
+        custom = event.get("custom")
+        if not isinstance(custom, dict):
+            continue
+        for field in custom:
+            if field not in custom_fields:
+                custom_fields.append(field)
+    return {"title": str(title), "events": events, "custom_fields": custom_fields}
+
+
 async def fetch_current_rundown(
     base_url: str,
     auth_header: str | None = None,
     auth_value: str | None = None,
-) -> list[dict[str, Any]]:
+) -> RundownData:
     headers = {}
     if auth_header and auth_value:
         headers[auth_header] = auth_value
@@ -75,7 +97,7 @@ async def fetch_current_rundown(
             response.raise_for_status()
             if "application/json" not in response.headers.get("content-type", ""):
                 raise OntimeError("Ontime returned a non-JSON response; check the stage URL and login requirements")
-            return extract_events(response.json())
+            return extract_rundown(response.json())
     except OntimeError:
         raise
     except httpx.HTTPError as exc:

@@ -7,7 +7,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from .ontime import OntimeError, fetch_current_rundown
+from .ontime import OntimeError, RundownData, fetch_current_rundown
 from .pdf import render_pdf
 
 ROOT = Path(__file__).parent
@@ -22,7 +22,7 @@ async def index(request: Request) -> str:
     )
 
 
-async def _get_events(base_url: str) -> list[dict]:
+async def _get_rundown(base_url: str) -> RundownData:
     return await fetch_current_rundown(
         base_url,
         os.getenv("ONTIME_AUTH_HEADER"),
@@ -33,8 +33,8 @@ async def _get_events(base_url: str) -> list[dict]:
 @app.post("/connection-test")
 async def connection_test(base_url: str = Form(...)) -> JSONResponse:
     try:
-        events = await _get_events(base_url)
-        return JSONResponse({"ok": True, "event_count": len(events)})
+        rundown = await _get_rundown(base_url)
+        return JSONResponse({"ok": True, "event_count": len(rundown["events"])})
     except OntimeError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=502)
 
@@ -45,10 +45,18 @@ async def preview(
     include_skipped: bool = Form(False),
 ) -> JSONResponse:
     try:
-        events = await _get_events(base_url)
+        rundown = await _get_rundown(base_url)
+        events = rundown["events"]
         if not include_skipped:
             events = [event for event in events if not event.get("skip")]
-        return JSONResponse({"ok": True, "events": events})
+        return JSONResponse(
+            {
+                "ok": True,
+                "title": rundown["title"],
+                "custom_fields": rundown["custom_fields"],
+                "events": events,
+            }
+        )
     except OntimeError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=502)
 
@@ -61,14 +69,26 @@ async def generate(
     paper_size: str = Form("Letter"),
     orientation: str = Form("landscape"),
     include_skipped: bool = Form(False),
+    include_notes: bool = Form(False),
+    selected_custom_fields: list[str] | None = Form(None),
 ) -> Response:
     try:
-        events = await _get_events(base_url)
+        rundown = await _get_rundown(base_url)
+        events = rundown["events"]
         if not include_skipped:
             events = [event for event in events if not event.get("skip")]
         safe_paper = paper_size if paper_size in {"Letter", "A4"} else "Letter"
         safe_orientation = orientation if orientation in {"portrait", "landscape"} else "landscape"
-        pdf = render_pdf(events, title, safe_paper, safe_orientation)
+        allowed_fields = set(rundown["custom_fields"])
+        safe_fields = [field for field in (selected_custom_fields or []) if field in allowed_fields]
+        pdf = render_pdf(
+            events,
+            title,
+            safe_paper,
+            safe_orientation,
+            include_notes=include_notes,
+            selected_custom_fields=safe_fields,
+        )
     except OntimeError as exc:
         html = templates.get_template("index.html").render(base_url=base_url, error=str(exc))
         return HTMLResponse(html, status_code=502)

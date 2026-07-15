@@ -1,9 +1,11 @@
 from io import BytesIO
 
+from fastapi.testclient import TestClient
 from pypdf import PdfReader
 
-from app.ontime import build_rundown_url, extract_events
-from app.pdf import clock, render_pdf
+from app.main import app
+from app.ontime import build_rundown_url, extract_events, extract_rundown
+from app.pdf import clock, cue_colour, cue_tint, render_pdf
 
 
 EVENT = {
@@ -14,7 +16,8 @@ EVENT = {
     "note": "House opens",
     "timeStart": 36_000_000,
     "duration": 1_800_000,
-    "custom": {"Audio": "Walk-in playlist"},
+    "colour": "#339E4E",
+    "custom": {"Audio": "Walk-in playlist", "Video": "Holding slide"},
 }
 
 
@@ -31,6 +34,18 @@ def test_extract_events_from_normalized_rundown():
         "entries": {"evt-1": EVENT, "group-1": group},
     }
     assert extract_events(rundown) == [EVENT]
+
+
+def test_extract_rundown_metadata_and_custom_fields():
+    rundown = extract_rundown(
+        {
+            "title": "Fall Kick Off 2026",
+            "flatOrder": ["evt-1"],
+            "entries": {"evt-1": EVENT},
+        }
+    )
+    assert rundown["title"] == "Fall Kick Off 2026"
+    assert rundown["custom_fields"] == ["Audio", "Video"]
 
 
 def test_empty_normalized_rundown_is_valid():
@@ -61,6 +76,67 @@ def test_render_pdf_supports_a4_portrait():
     assert render_pdf([EVENT], "Show Cue Sheet", "A4", "portrait").startswith(b"%PDF")
 
 
+def test_cue_colour_and_tint_are_print_safe():
+    assert cue_colour("#339e4e") == "#339E4E"
+    assert cue_tint("#339E4E") == "rgba(51, 158, 78, 0.15)"
+    assert cue_colour("not-a-colour") == ""
+
+
+def test_pdf_only_contains_selected_custom_fields():
+    page = PdfReader(
+        BytesIO(
+            render_pdf(
+                [EVENT],
+                "Selected Fields",
+                selected_custom_fields=["Video"],
+            )
+        )
+    ).pages[0]
+    text = page.extract_text()
+    assert "VIDEO" in text and "Holding slide" in text
+    assert "AUDIO" not in text and "Walk-in playlist" not in text
+
+
+def test_preview_returns_ontime_title_and_available_fields(monkeypatch):
+    async def fake_rundown(_base_url):
+        return {
+            "title": "Fall Kick Off 2026",
+            "events": [EVENT],
+            "custom_fields": ["Audio", "Video"],
+        }
+
+    monkeypatch.setattr("app.main._get_rundown", fake_rundown)
+    response = TestClient(app).post("/preview", data={"base_url": "https://example.com"})
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Fall Kick Off 2026"
+    assert response.json()["custom_fields"] == ["Audio", "Video"]
+
+
+def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
+    async def fake_rundown(_base_url):
+        return {
+            "title": "Fall Kick Off 2026",
+            "events": [EVENT],
+            "custom_fields": ["Audio", "Video"],
+        }
+
+    monkeypatch.setattr("app.main._get_rundown", fake_rundown)
+    response = TestClient(app).post(
+        "/generate",
+        data={
+            "base_url": "https://example.com",
+            "title": "Fall Kick Off 2026",
+            "include_notes": "true",
+            "selected_custom_fields": ["Audio", "Video"],
+        },
+    )
+
+    text = PdfReader(BytesIO(response.content)).pages[0].extract_text()
+    assert response.status_code == 200
+    assert all(header in text for header in ("NOTES", "AUDIO", "VIDEO"))
+
+
 def test_multipage_pdf_repeats_column_headers():
     events = [
         {**EVENT, "id": f"evt-{index}", "cue": str(index), "title": f"Cue {index}"}
@@ -71,4 +147,4 @@ def test_multipage_pdf_repeats_column_headers():
     assert len(pages) > 1
     for page in pages:
         text = page.extract_text()
-        assert all(header in text for header in ("CUE", "START", "DURATION", "TITLE", "NOTES", "CUSTOM FIELDS"))
+        assert all(header in text for header in ("CUE", "START", "DURATION", "TITLE", "NOTES", "AUDIO", "VIDEO"))

@@ -15,7 +15,7 @@
     .brand-mark { width:22px; height:22px; display:grid; grid-template-columns:repeat(2,1fr); gap:3px; }
     .brand-mark span { background:var(--accent); }
     .app-shell { min-height:calc(100vh - 68px); display:grid; grid-template-columns:370px minmax(0,1fr); }
-    aside { background:#fff; border-right:1px solid var(--line); padding:28px; display:flex; flex-direction:column; gap:28px; }
+    aside { max-height:calc(100vh - 68px); overflow-y:auto; background:#fff; border-right:1px solid var(--line); padding:28px; display:flex; flex-direction:column; gap:28px; }
     .section { padding-bottom:28px; border-bottom:1px solid var(--line); }
     .section:last-of-type { border-bottom:0; }
     h1,h2,p { margin-top:0; }
@@ -39,6 +39,11 @@
     .segmented label:has(input:checked) { background:var(--accent); color:#101200; }
     .check { display:flex; align-items:center; gap:10px; font-weight:550; cursor:pointer; }
     .check input { width:18px; min-height:18px; accent-color:#8aaa00; }
+    .field-picker { margin:4px 0 20px; padding:16px 0 18px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .field-picker h3 { margin:0 0 4px; font-size:14px; }
+    .field-picker p { margin:0 0 14px; color:var(--muted); font-size:12px; }
+    .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; }
+    .field-grid .check { min-width:0; font-size:13px; overflow-wrap:anywhere; }
     .primary { width:100%; min-height:52px; margin-top:auto; border:1px solid #617500; border-radius:3px; background:var(--accent); color:#111400; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 2px 0 #748900; }
     .primary:hover { background:#d4fb16; }
     .primary:disabled, .secondary:disabled { opacity:.55; cursor:wait; }
@@ -79,6 +84,7 @@
       <section class="section">
         <h2>Document settings</h2>
         <div class="field"><label for="title">Document title</label><input type="text" id="title" name="title" value="Cue Sheet" required></div>
+        <div class="field-picker" id="field-picker" hidden><h3>PDF fields</h3><p>Choose the columns to include.</p><div class="field-grid"><label class="check"><input type="checkbox" id="include_notes" name="include_notes" value="true" checked>Notes</label><span></span><div id="custom-field-options" style="display:contents"></div></div></div>
         <div class="field"><label for="paper_size">Paper size</label><select id="paper_size" name="paper_size"><option value="Letter">US Letter (8.5 × 11 in)</option><option value="A4">A4 (210 × 297 mm)</option></select></div>
         <fieldset class="field" style="border:0;padding:0"><legend style="margin-bottom:8px">Orientation</legend><div class="segmented"><label><input type="radio" name="orientation" value="portrait">Portrait</label><label><input type="radio" name="orientation" value="landscape" checked>Landscape</label></div></fieldset>
         <label class="check"><input type="checkbox" id="include_skipped" name="include_skipped" value="true">Include skipped cues</label>
@@ -87,7 +93,7 @@
     </aside>
     <main>
       <div class="workspace-head"><div><h1>Cue sheet preview</h1><p>Connect to your stage to preview the current rundown.</p></div><div class="preview-meta" id="preview-meta">No rundown loaded</div></div>
-      <div class="canvas"><article class="paper" id="paper"><div class="paper-head"><div class="paper-title" id="paper-title">Cue Sheet</div><div class="paper-count" id="paper-count">Preview</div></div><div class="empty" id="empty"><div><strong>Your cue sheet will appear here</strong>Test the stage connection to load the current rundown.</div></div><table id="preview-table" hidden><thead><tr><th class="col-cue">Cue</th><th class="col-time">Start</th><th class="col-duration">Duration</th><th class="col-title">Title</th><th class="col-note">Notes</th></tr></thead><tbody></tbody></table></article></div>
+      <div class="canvas"><article class="paper" id="paper"><div class="paper-head"><div class="paper-title" id="paper-title">Cue Sheet</div><div class="paper-count" id="paper-count">Preview</div></div><div class="empty" id="empty"><div><strong>Your cue sheet will appear here</strong>Test the stage connection to load the current rundown.</div></div><table id="preview-table" hidden><thead><tr></tr></thead><tbody></tbody></table></article></div>
     </main>
   </form>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -99,10 +105,13 @@
     const testButton = document.querySelector('#test-button');
     const generateButton = document.querySelector('#generate-button');
     const table = document.querySelector('#preview-table');
+    const theadRow = table.querySelector('thead tr');
     const tbody = table.querySelector('tbody');
     const empty = document.querySelector('#empty');
     const paper = document.querySelector('#paper');
     const toast = document.querySelector('#toast');
+    const fieldPicker = document.querySelector('#field-picker');
+    const customFieldOptions = document.querySelector('#custom-field-options');
     let lastEvents = [];
 
     function clock(ms) { const s=Math.floor((Number(ms)||0)/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), r=s%60; return [h,m,r].map(v=>String(v).padStart(2,'0')).join(':'); }
@@ -114,8 +123,26 @@
       statusEl.querySelector(':scope > div span').textContent = detail;
     }
     function escapeHtml(value='') { const d=document.createElement('div'); d.textContent=String(value); return d.innerHTML; }
+    function cueColour(value='') { const colour=String(value).trim(); return /^#[0-9a-f]{6}$/i.test(colour)?colour:''; }
+    function cueTint(value='') { const colour=cueColour(value); if(!colour) return ''; const n=parseInt(colour.slice(1),16); return `rgba(${n>>16},${(n>>8)&255},${n&255},.15)`; }
+    function selectedCustomFields() { return [...customFieldOptions.querySelectorAll('input:checked')].map(input=>input.value); }
+    function configureFields(fields) {
+      const previous=new Set(selectedCustomFields());
+      const firstLoad=fieldPicker.hidden;
+      customFieldOptions.innerHTML=fields.map(field=>`<label class="check"><input type="checkbox" name="selected_custom_fields" value="${escapeHtml(field)}"${!firstLoad&&previous.has(field)?' checked':''}>${escapeHtml(field)}</label>`).join('');
+      fieldPicker.hidden=false;
+    }
     function render(events) {
-      lastEvents=events; tbody.innerHTML=events.slice(0,12).map(e=>`<tr><td>${escapeHtml(e.cue||'—')}</td><td>${clock(e.timeStart)}</td><td>${clock(e.duration)}</td><td><strong>${escapeHtml(e.title||'')}</strong></td><td>${escapeHtml(e.note||'')}</td></tr>`).join('');
+      lastEvents=events;
+      const includeNotes=document.querySelector('#include_notes').checked;
+      const customFields=selectedCustomFields();
+      const headers=['Cue','Start','Duration','Title',...(includeNotes?['Notes']:[]),...customFields];
+      theadRow.innerHTML=headers.map((header,index)=>`<th class="${['col-cue','col-time','col-duration','col-title'][index]||''}">${escapeHtml(header)}</th>`).join('');
+      tbody.innerHTML=events.slice(0,12).map(e=>{
+        const colour=cueColour(e.colour); const style=colour?` style="color:${colour};background-color:${cueTint(colour)}"`:'';
+        const extra=[...(includeNotes?[e.note||'']:[]),...customFields.map(field=>e.custom?.[field]||'')];
+        return `<tr${style}><td>${escapeHtml(e.cue||'—')}</td><td>${clock(e.timeStart)}</td><td>${clock(e.duration)}</td><td><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td>${escapeHtml(value)}</td>`).join('')}</tr>`;
+      }).join('');
       empty.hidden=events.length>0; table.hidden=events.length===0;
       document.querySelector('#paper-count').textContent=`${events.length} cue${events.length===1?'':'s'}`;
       document.querySelector('#preview-meta').textContent=events.length?`${events.length} cues loaded`:'No cues in rundown';
@@ -123,11 +150,14 @@
     function buildData() { return new FormData(form); }
     async function loadPreview() {
       const response=await fetch('/preview',{method:'POST',body:buildData()}); const data=await response.json();
-      if(!response.ok) throw new Error(data.error||'Unable to load rundown'); render(data.events);
-      return data.events;
+      if(!response.ok) throw new Error(data.error||'Unable to load rundown');
+      title.value=data.title||'Cue Sheet'; document.querySelector('#paper-title').textContent=title.value;
+      configureFields(data.custom_fields||[]); render(data.events);
+      return data;
     }
-    testButton.addEventListener('click', async()=>{ if(!form.reportValidity()) return; setBusy(true); setStatus('idle','Connecting…','Reading the current rundown.'); try { const events=await loadPreview(); setStatus('success','Connected',`${events.length} cues available · checked ${new Date().toLocaleTimeString()}`); } catch(error) { setStatus('error','Connection failed',error.message); showToast(error.message); } finally { setBusy(false); } });
+    testButton.addEventListener('click', async()=>{ if(!form.reportValidity()) return; setBusy(true); setStatus('idle','Connecting…','Reading the current rundown.'); try { const data=await loadPreview(); setStatus('success','Connected',`${data.events.length} cues available · checked ${new Date().toLocaleTimeString()}`); } catch(error) { setStatus('error','Connection failed',error.message); showToast(error.message); } finally { setBusy(false); } });
     title.addEventListener('input',()=>document.querySelector('#paper-title').textContent=title.value||'Cue Sheet');
+    fieldPicker.addEventListener('change',()=>render(lastEvents));
     document.querySelectorAll('input[name="orientation"]').forEach(el=>el.addEventListener('change',()=>paper.classList.toggle('portrait',el.value==='portrait'&&el.checked)));
     document.querySelector('#include_skipped').addEventListener('change',()=>{ if(lastEvents.length) testButton.click(); });
     form.addEventListener('submit',async event=>{ event.preventDefault(); if(!form.reportValidity()) return; setBusy(true); try { const response=await fetch('/generate',{method:'POST',body:buildData()}); if(!response.ok) throw new Error('PDF generation failed'); const blob=await response.blob(); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='cue-sheet.pdf'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); showToast('PDF cue sheet generated.'); } catch(error) { showToast(error.message); } finally { setBusy(false); } });
