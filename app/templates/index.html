@@ -52,6 +52,12 @@
     .workspace-head h1 { margin-bottom:5px; font-size:21px; letter-spacing:-.025em; }
     .workspace-head p { margin:0; color:var(--muted); font-size:14px; }
     .preview-meta { font-size:13px; color:var(--muted); white-space:nowrap; }
+    .page-nav { min-height:42px; margin:-8px 0 16px; display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+    .page-nav-label { margin-right:2px; color:var(--muted); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+    .page-nav button { min-height:38px; padding:0 14px; border:1px solid #858b8d; border-radius:3px; background:#fff; font-weight:700; cursor:pointer; }
+    .page-nav button:hover:not(:disabled) { background:var(--soft); }
+    .page-nav button:disabled { color:#9da2a4; background:#f2f4f4; cursor:not-allowed; }
+    .page-nav select { width:auto; min-width:116px; min-height:38px; padding:7px 32px 7px 10px; font-weight:700; }
     .canvas { min-height:690px; padding:34px; display:grid; place-items:center; background:#e4e7e7; border:1px solid #d4d8d9; overflow:auto; }
     .paper { width:min(100%,1050px); min-width:760px; aspect-ratio:11/8.5; padding:42px 48px; background:var(--paper); border:1px solid #8c9193; box-shadow:0 8px 24px rgba(22,25,26,.13); align-self:start; }
     .paper.portrait { width:min(76%,760px); min-width:620px; aspect-ratio:8.5/11; }
@@ -67,7 +73,7 @@
     .loading { opacity:.48; }
     .toast { position:fixed; right:24px; bottom:24px; max-width:420px; padding:14px 16px; color:white; background:#202324; border-left:4px solid var(--accent); box-shadow:0 8px 26px rgba(0,0,0,.22); font-size:14px; transform:translateY(140%); transition:transform .22s ease; }
     .toast.show { transform:translateY(0); }
-    @media (max-width:900px) { .app-shell { grid-template-columns:1fr; } aside { border-right:0; border-bottom:1px solid var(--line); } main { padding:24px 18px; } .workspace-head { flex-direction:column; } .preview-meta { white-space:normal; } .canvas { display:block; padding:18px; } .paper { min-width:720px; } }
+    @media (max-width:900px) { .app-shell { grid-template-columns:1fr; } aside { border-right:0; border-bottom:1px solid var(--line); } main { padding:24px 18px; } .workspace-head { flex-direction:column; } .preview-meta { white-space:normal; } .page-nav { justify-content:flex-start; overflow-x:auto; padding-bottom:2px; } .page-nav-label { display:none; } .page-nav button { white-space:nowrap; } .canvas { display:block; padding:18px; } .paper { min-width:720px; } }
     @media (prefers-reduced-motion:reduce) { .toast { transition:none; } }
   </style>
 </head>
@@ -93,6 +99,7 @@
     </aside>
     <main>
       <div class="workspace-head"><div><h1>Cue sheet preview</h1><p>Connect to your stage to preview the current rundown.</p></div><div class="preview-meta" id="preview-meta">No rundown loaded</div></div>
+      <nav class="page-nav" id="page-nav" aria-label="Cue sheet preview pages" hidden><span class="page-nav-label">Preview pages</span><button id="previous-page" type="button" data-testid="previous-page">← Previous</button><select id="page-select" aria-label="Preview page" data-testid="page-select"></select><button id="next-page" type="button" data-testid="next-page">Next →</button></nav>
       <div class="canvas"><article class="paper" id="paper"><div class="paper-head"><div class="paper-title" id="paper-title">Cue Sheet</div><div class="paper-count" id="paper-count">Preview</div></div><div class="empty" id="empty"><div><strong>Your cue sheet will appear here</strong>Test the stage connection to load the current rundown.</div></div><table id="preview-table" hidden><thead><tr></tr></thead><tbody></tbody></table></article></div>
     </main>
   </form>
@@ -112,7 +119,13 @@
     const toast = document.querySelector('#toast');
     const fieldPicker = document.querySelector('#field-picker');
     const customFieldOptions = document.querySelector('#custom-field-options');
+    const pageNav = document.querySelector('#page-nav');
+    const previousPageButton = document.querySelector('#previous-page');
+    const nextPageButton = document.querySelector('#next-page');
+    const pageSelect = document.querySelector('#page-select');
+    const PREVIEW_PAGE_SIZE = 12;
     let lastEvents = [];
+    let currentPage = 0;
 
     function clock(ms) { const s=Math.floor((Number(ms)||0)/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), r=s%60; return [h,m,r].map(v=>String(v).padStart(2,'0')).join(':'); }
     function showToast(message) { toast.textContent=message; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),3200); }
@@ -132,19 +145,28 @@
       customFieldOptions.innerHTML=fields.map(field=>`<label class="check"><input type="checkbox" name="selected_custom_fields" value="${escapeHtml(field)}"${!firstLoad&&previous.has(field)?' checked':''}>${escapeHtml(field)}</label>`).join('');
       fieldPicker.hidden=false;
     }
-    function render(events) {
+    function render(events, resetPage=false) {
       lastEvents=events;
+      const totalPages=Math.max(1,Math.ceil(events.length/PREVIEW_PAGE_SIZE));
+      currentPage=resetPage?0:Math.min(currentPage,totalPages-1);
+      const pageStart=currentPage*PREVIEW_PAGE_SIZE;
+      const pageEvents=events.slice(pageStart,pageStart+PREVIEW_PAGE_SIZE);
       const includeNotes=document.querySelector('#include_notes').checked;
       const customFields=selectedCustomFields();
       const headers=['Cue','Start','Duration','Title',...(includeNotes?['Notes']:[]),...customFields];
       theadRow.innerHTML=headers.map((header,index)=>`<th class="${['col-cue','col-time','col-duration','col-title'][index]||''}">${escapeHtml(header)}</th>`).join('');
-      tbody.innerHTML=events.slice(0,12).map(e=>{
+      tbody.innerHTML=pageEvents.map(e=>{
         const colour=cueColour(e.colour); const style=colour?` style="color:${colour};background-color:${cueTint(colour)}"`:'';
         const extra=[...(includeNotes?[e.note||'']:[]),...customFields.map(field=>e.custom?.[field]||'')];
         return `<tr${style}><td>${escapeHtml(e.cue||'—')}</td><td>${clock(e.timeStart)}</td><td>${clock(e.duration)}</td><td><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td>${escapeHtml(value)}</td>`).join('')}</tr>`;
       }).join('');
       empty.hidden=events.length>0; table.hidden=events.length===0;
-      document.querySelector('#paper-count').textContent=`${events.length} cue${events.length===1?'':'s'}`;
+      pageNav.hidden=events.length===0||totalPages===1;
+      pageSelect.innerHTML=Array.from({length:totalPages},(_,index)=>`<option value="${index}">Page ${index+1} of ${totalPages}</option>`).join('');
+      pageSelect.value=String(currentPage);
+      previousPageButton.disabled=currentPage===0;
+      nextPageButton.disabled=currentPage===totalPages-1;
+      document.querySelector('#paper-count').textContent=events.length?`${events.length} cue${events.length===1?'':'s'} · Page ${currentPage+1} of ${totalPages}`:'Preview';
       document.querySelector('#preview-meta').textContent=events.length?`${events.length} cues loaded`:'No cues in rundown';
     }
     function buildData() { return new FormData(form); }
@@ -152,12 +174,15 @@
       const response=await fetch('/preview',{method:'POST',body:buildData()}); const data=await response.json();
       if(!response.ok) throw new Error(data.error||'Unable to load rundown');
       title.value=data.title||'Cue Sheet'; document.querySelector('#paper-title').textContent=title.value;
-      configureFields(data.custom_fields||[]); render(data.events);
+      configureFields(data.custom_fields||[]); render(data.events,true);
       return data;
     }
     testButton.addEventListener('click', async()=>{ if(!form.reportValidity()) return; setBusy(true); setStatus('idle','Connecting…','Reading the current rundown.'); try { const data=await loadPreview(); setStatus('success','Connected',`${data.events.length} cues available · checked ${new Date().toLocaleTimeString()}`); } catch(error) { setStatus('error','Connection failed',error.message); showToast(error.message); } finally { setBusy(false); } });
     title.addEventListener('input',()=>document.querySelector('#paper-title').textContent=title.value||'Cue Sheet');
     fieldPicker.addEventListener('change',()=>render(lastEvents));
+    previousPageButton.addEventListener('click',()=>{ if(currentPage>0) { currentPage-=1; render(lastEvents); } });
+    nextPageButton.addEventListener('click',()=>{ if((currentPage+1)*PREVIEW_PAGE_SIZE<lastEvents.length) { currentPage+=1; render(lastEvents); } });
+    pageSelect.addEventListener('change',()=>{ currentPage=Number(pageSelect.value); render(lastEvents); });
     document.querySelectorAll('input[name="orientation"]').forEach(el=>el.addEventListener('change',()=>paper.classList.toggle('portrait',el.value==='portrait'&&el.checked)));
     document.querySelector('#include_skipped').addEventListener('change',()=>{ if(lastEvents.length) testButton.click(); });
     form.addEventListener('submit',async event=>{ event.preventDefault(); if(!form.reportValidity()) return; setBusy(true); try { const response=await fetch('/generate',{method:'POST',body:buildData()}); if(!response.ok) throw new Error('PDF generation failed'); const blob=await response.blob(); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download='cue-sheet.pdf'; link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); showToast('PDF cue sheet generated.'); } catch(error) { showToast(error.message); } finally { setBusy(false); } });

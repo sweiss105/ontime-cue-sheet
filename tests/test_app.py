@@ -113,6 +113,16 @@ def test_preview_returns_ontime_title_and_available_fields(monkeypatch):
     assert response.json()["custom_fields"] == ["Audio", "Video"]
 
 
+def test_index_includes_multipage_preview_controls():
+    html = TestClient(app).get("/").text
+
+    assert 'id="page-nav"' in html
+    assert 'data-testid="previous-page"' in html
+    assert 'data-testid="page-select"' in html
+    assert 'data-testid="next-page"' in html
+    assert "events.slice(pageStart,pageStart+PREVIEW_PAGE_SIZE)" in html
+
+
 def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
     async def fake_rundown(_base_url):
         return {
