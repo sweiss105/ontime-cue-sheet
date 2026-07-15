@@ -31,7 +31,19 @@ def extract_events(data: Any) -> list[dict[str, Any]]:
     if not isinstance(data, dict):
         raise OntimeError("Ontime returned an unexpected rundown format")
 
-    for key in ("events", "rundown", "entries", "data"):
+    entries = data.get("entries")
+    if isinstance(entries, dict):
+        order = data.get("flatOrder")
+        if not isinstance(order, list):
+            order = list(entries)
+        return [
+            entry
+            for entry_id in order
+            if isinstance((entry := entries.get(entry_id)), dict)
+            and entry.get("type", "event").lower() == "event"
+        ]
+
+    for key in ("events", "rundown", "data"):
         value = data.get(key)
         if isinstance(value, list):
             return [item for item in value if isinstance(item, dict) and item.get("type", "event").lower() == "event"]

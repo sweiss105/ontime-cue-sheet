@@ -18,6 +18,21 @@ def test_extract_events_from_payload():
     assert extract_events({"payload": {"events": [EVENT]}}) == [EVENT]
 
 
+def test_extract_events_from_normalized_rundown():
+    group = {"type": "group", "id": "group-1", "title": "Act One"}
+    rundown = {
+        "id": "rundown-1",
+        "title": "Daily Show",
+        "flatOrder": ["group-1", "evt-1"],
+        "entries": {"evt-1": EVENT, "group-1": group},
+    }
+    assert extract_events(rundown) == [EVENT]
+
+
+def test_empty_normalized_rundown_is_valid():
+    assert extract_events({"flatOrder": [], "entries": {}}) == []
+
+
 def test_authenticated_share_link_preserves_token():
     assert build_rundown_url("https://stage.example.com?token=secret") == (
         "https://stage.example.com/data/rundowns/current/?token=secret"
