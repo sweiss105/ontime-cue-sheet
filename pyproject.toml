@@ -3,6 +3,7 @@ name = "ontime-cue-sheet"
 version = "0.1.0"
 description = "Generate printable PDF cue sheets from an Ontime rundown."
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115,<1",
