@@ -121,8 +121,8 @@ def test_pdf_and_preview_overlay_alternating_rows():
     pdf_template, _, _ = env.loader.get_source(env, "cue_sheet.html")
     index_html = TestClient(app).get("/").text
 
-    assert "tbody tr:nth-child(even) td { background-color: rgba(0, 0, 0, 0.05); }" in pdf_template
-    assert "tbody tr:nth-child(even) td { background-color:rgba(0,0,0,.05); }" in index_html
+    assert "tbody tr:nth-child(even) td { background-color: rgba(255, 255, 255, 0.05); }" in pdf_template
+    assert "tbody tr:nth-child(even) td { background-color:rgba(255,255,255,.05); }" in index_html
     assert "tbody td:nth-child(even)" not in pdf_template
     assert "tbody td:nth-child(even)" not in index_html
 
