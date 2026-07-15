@@ -42,8 +42,18 @@
     .field-picker { margin:4px 0 20px; padding:16px 0 18px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
     .field-picker h3 { margin:0 0 4px; font-size:14px; }
     .field-picker p { margin:0 0 14px; color:var(--muted); font-size:12px; }
-    .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; }
-    .field-grid .check { min-width:0; font-size:13px; overflow-wrap:anywhere; }
+    .field-list { display:grid; gap:6px; }
+    .field-option { min-height:42px; display:grid; grid-template-columns:26px minmax(0,1fr) auto; align-items:center; gap:6px; padding:4px 5px 4px 8px; background:#fff; border:1px solid #c7ccce; border-radius:3px; cursor:grab; transition:border-color .15s ease, box-shadow .15s ease, opacity .15s ease; }
+    .field-option:hover { border-color:#858b8d; }
+    .field-option:focus-within { border-color:#17191a; box-shadow:0 0 0 2px rgba(200,240,0,.45); }
+    .field-option.dragging { opacity:.42; border-style:dashed; }
+    .drag-handle { color:#777d80; font-size:18px; line-height:1; letter-spacing:-3px; user-select:none; }
+    .field-option .check { min-width:0; font-size:13px; overflow-wrap:anywhere; }
+    .field-option .check input { flex:none; }
+    .move-buttons { display:flex; gap:2px; }
+    .move-button { width:28px; height:28px; padding:0; display:grid; place-items:center; color:#343839; background:#f7f8f8; border:1px solid #c7ccce; border-radius:3px; font-weight:800; cursor:pointer; }
+    .move-button:hover:not(:disabled) { background:var(--accent); border-color:#8aaa00; }
+    .move-button:disabled { opacity:.28; cursor:not-allowed; }
     .primary { width:100%; min-height:52px; margin-top:auto; border:1px solid #617500; border-radius:3px; background:var(--accent); color:#111400; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 2px 0 #748900; }
     .primary:hover { background:#d4fb16; }
     .primary:disabled, .secondary:disabled { opacity:.55; cursor:wait; }
@@ -85,13 +95,13 @@
       <section class="section">
         <h2>Stage connection</h2>
         <div class="field"><label for="base_url">Ontime stage or share URL</label><input type="url" id="base_url" name="base_url" value="{{ base_url }}" placeholder="https://your-stage.example.com" required><small>For a password-protected stage, paste an authenticated Companion share link.</small></div>
-        <button class="secondary" id="test-button" type="button">Test connection</button>
+        <button class="secondary" id="test-button" type="button">Import Cues</button>
         <div class="status" id="connection-status" data-state="idle"><span class="status-dot"></span><div><strong>Not connected</strong><br><span>Enter your hosted Ontime stage URL.</span></div></div>
       </section>
       <section class="section">
         <h2>Document settings</h2>
         <div class="field"><label for="title">Document title</label><input type="text" id="title" name="title" value="Cue Sheet" required></div>
-        <div class="field-picker" id="field-picker" hidden><h3>PDF fields</h3><p>Choose the columns to include.</p><div class="field-grid"><label class="check"><input type="checkbox" id="include_notes" name="include_notes" value="true" checked>Notes</label><span></span><div id="custom-field-options" style="display:contents"></div></div></div>
+        <div class="field-picker" id="field-picker" hidden><h3>PDF fields</h3><p>Choose fields, then drag them to set their cue-sheet order.</p><div class="field-list" id="field-list"><div class="field-option" draggable="true" data-field="Notes"><span class="drag-handle" aria-hidden="true">⋮⋮</span><label class="check"><input type="checkbox" id="include_notes" name="include_notes" value="true" checked><span>Notes</span></label><span class="move-buttons"><button class="move-button" type="button" data-move="up" aria-label="Move Notes up">↑</button><button class="move-button" type="button" data-move="down" aria-label="Move Notes down">↓</button></span></div></div><div id="selected-field-order"><input type="hidden" name="fields_configured" value="true"><input type="hidden" name="selected_fields" value="Notes"></div></div>
         <div class="field"><label for="paper_size">Paper size</label><select id="paper_size" name="paper_size"><option value="Letter">US Letter (8.5 × 11 in)</option><option value="A4">A4 (210 × 297 mm)</option></select></div>
         <fieldset class="field" style="border:0;padding:0"><legend style="margin-bottom:8px">Orientation</legend><div class="segmented"><label><input type="radio" name="orientation" value="portrait">Portrait</label><label><input type="radio" name="orientation" value="landscape" checked>Landscape</label></div></fieldset>
         <label class="check"><input type="checkbox" id="include_skipped" name="include_skipped" value="true">Include skipped cues</label>
@@ -99,9 +109,9 @@
       <button class="primary" id="generate-button" type="submit">Generate PDF</button>
     </aside>
     <main>
-      <div class="workspace-head"><div><h1>Cue sheet preview</h1><p>Connect to your stage to preview the current rundown.</p></div><div class="preview-meta" id="preview-meta">No rundown loaded</div></div>
+      <div class="workspace-head"><div><h1>Cue sheet preview</h1><p>Import cues from your stage to preview the current rundown.</p></div><div class="preview-meta" id="preview-meta">No rundown loaded</div></div>
       <nav class="page-nav" id="page-nav" aria-label="Cue sheet preview pages" hidden><span class="page-nav-label">Preview pages</span><button id="previous-page" type="button" data-testid="previous-page">← Previous</button><select id="page-select" aria-label="Preview page" data-testid="page-select"></select><button id="next-page" type="button" data-testid="next-page">Next →</button></nav>
-      <div class="canvas"><article class="paper" id="paper"><div class="paper-head"><div class="paper-title" id="paper-title">Cue Sheet</div><div class="paper-count" id="paper-count">Preview</div></div><div class="empty" id="empty"><div><strong>Your cue sheet will appear here</strong>Test the stage connection to load the current rundown.</div></div><table id="preview-table" hidden><thead><tr></tr></thead><tbody></tbody></table></article></div>
+      <div class="canvas"><article class="paper" id="paper"><div class="paper-head"><div class="paper-title" id="paper-title">Cue Sheet</div><div class="paper-count" id="paper-count">Preview</div></div><div class="empty" id="empty"><div><strong>Your cue sheet will appear here</strong>Import cues to load the current rundown.</div></div><table id="preview-table" hidden><thead><tr></tr></thead><tbody></tbody></table></article></div>
     </main>
   </form>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -119,7 +129,8 @@
     const paper = document.querySelector('#paper');
     const toast = document.querySelector('#toast');
     const fieldPicker = document.querySelector('#field-picker');
-    const customFieldOptions = document.querySelector('#custom-field-options');
+    const fieldList = document.querySelector('#field-list');
+    const selectedFieldOrder = document.querySelector('#selected-field-order');
     const pageNav = document.querySelector('#page-nav');
     const previousPageButton = document.querySelector('#previous-page');
     const nextPageButton = document.querySelector('#next-page');
@@ -129,6 +140,7 @@
     let previewPages = [];
     let previewColumnWidths = [];
     let resizeFrame = 0;
+    let draggedFieldOption = null;
 
     function clock(ms) { const s=Math.floor((Number(ms)||0)/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), r=s%60; return [h,m,r].map(v=>String(v).padStart(2,'0')).join(':'); }
     function showToast(message) { toast.textContent=message; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),3200); }
@@ -139,25 +151,45 @@
       statusEl.querySelector(':scope > div span').textContent = detail;
     }
     function escapeHtml(value='') { const d=document.createElement('div'); d.textContent=String(value); return d.innerHTML; }
+    function escapeAttribute(value='') { return escapeHtml(value).replaceAll('"','&quot;'); }
     function cueColour(value='') { const colour=String(value).trim(); return /^#[0-9a-f]{6}$/i.test(colour)?colour:''; }
     function cueTint(value='') { const colour=cueColour(value); if(!colour) return ''; const n=parseInt(colour.slice(1),16); return `rgba(${n>>16},${(n>>8)&255},${n&255},.15)`; }
-    function selectedCustomFields() { return [...customFieldOptions.querySelectorAll('input:checked')].map(input=>input.value); }
+    function fieldItems() { return [...fieldList.querySelectorAll('.field-option')]; }
+    function selectedFields() { return fieldItems().filter(item=>item.querySelector('input').checked).map(item=>item.dataset.field); }
+    function fieldOption(field, checked=false) {
+      const attribute=escapeAttribute(field);
+      const isNotes=field==='Notes';
+      return `<div class="field-option" draggable="true" data-field="${attribute}"><span class="drag-handle" aria-hidden="true">⋮⋮</span><label class="check"><input type="checkbox"${isNotes?' id="include_notes" name="include_notes" value="true"':` name="selected_custom_fields" value="${attribute}"`}${checked?' checked':''}><span>${escapeHtml(field)}</span></label><span class="move-buttons"><button class="move-button" type="button" data-move="up" aria-label="Move ${attribute} up">↑</button><button class="move-button" type="button" data-move="down" aria-label="Move ${attribute} down">↓</button></span></div>`;
+    }
+    function syncSelectedFieldOrder() {
+      selectedFieldOrder.innerHTML='<input type="hidden" name="fields_configured" value="true">';
+      selectedFields().forEach(field=>{
+        const input=document.createElement('input');
+        input.type='hidden'; input.name='selected_fields'; input.value=field;
+        selectedFieldOrder.append(input);
+      });
+      const items=fieldItems();
+      items.forEach((item,index)=>{
+        item.querySelector('[data-move="up"]').disabled=index===0;
+        item.querySelector('[data-move="down"]').disabled=index===items.length-1;
+      });
+    }
     function configureFields(fields) {
-      const previous=new Set(selectedCustomFields());
+      const previousOrder=fieldItems().map(item=>item.dataset.field);
+      const previousSelected=new Set(selectedFields());
       const firstLoad=fieldPicker.hidden;
-      customFieldOptions.innerHTML=fields.map(field=>`<label class="check"><input type="checkbox" name="selected_custom_fields" value="${escapeHtml(field)}"${!firstLoad&&previous.has(field)?' checked':''}>${escapeHtml(field)}</label>`).join('');
+      const available=['Notes',...fields.filter(field=>field!=='Notes')];
+      const order=[...previousOrder.filter(field=>available.includes(field)),...available.filter(field=>!previousOrder.includes(field))];
+      fieldList.innerHTML=order.map(field=>fieldOption(field,firstLoad?field==='Notes':previousSelected.has(field))).join('');
       fieldPicker.hidden=false;
+      syncSelectedFieldOrder();
     }
     function previewHeaders() {
-      const includeNotes=document.querySelector('#include_notes').checked;
-      const customFields=selectedCustomFields();
-      return ['Cue','Start','Duration','Title',...(includeNotes?['Notes']:[]),...customFields];
+      return ['Cue','Start','Duration','Title',...selectedFields()];
     }
     function eventRow(e) {
-      const includeNotes=document.querySelector('#include_notes').checked;
-      const customFields=selectedCustomFields();
       const colour=cueColour(e.colour); const style=colour?` style="color:#000000;background-color:${cueTint(colour)}"`:'';
-      const extra=[...(includeNotes?[e.note||'']:[]),...customFields.map(field=>e.custom?.[field]||'')];
+      const extra=selectedFields().map(field=>field==='Notes'?(e.note||''):(e.custom?.[field]||''));
       return `<tr${style}><td class="col-cue">${escapeHtml(e.cue||'—')}</td><td class="col-time">${clock(e.timeStart)}</td><td class="col-duration">${clock(e.duration)}</td><td class="col-title"><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td class="col-content">${escapeHtml(value)}</td>`).join('')}</tr>`;
     }
     function setColumnWidths(widths=[]) {
@@ -226,7 +258,7 @@
       cancelAnimationFrame(resizeFrame);
       resizeFrame=requestAnimationFrame(()=>{ if(lastEvents.length) render(lastEvents); });
     }
-    function buildData() { return new FormData(form); }
+    function buildData() { syncSelectedFieldOrder(); return new FormData(form); }
     async function loadPreview() {
       const response=await fetch('/preview',{method:'POST',body:buildData()}); const data=await response.json();
       if(!response.ok) throw new Error(data.error||'Unable to load rundown');
@@ -236,7 +268,44 @@
     }
     testButton.addEventListener('click', async()=>{ if(!form.reportValidity()) return; setBusy(true); setStatus('idle','Connecting…','Reading the current rundown.'); try { const data=await loadPreview(); setStatus('success','Connected',`${data.events.length} cues available · checked ${new Date().toLocaleTimeString()}`); } catch(error) { setStatus('error','Connection failed',error.message); showToast(error.message); } finally { setBusy(false); } });
     title.addEventListener('input',()=>{ document.querySelector('#paper-title').textContent=title.value||'Cue Sheet'; schedulePagination(); });
-    fieldPicker.addEventListener('change',()=>render(lastEvents));
+    fieldPicker.addEventListener('change',()=>{ syncSelectedFieldOrder(); render(lastEvents); });
+    fieldList.addEventListener('dragstart',event=>{
+      draggedFieldOption=event.target.closest('.field-option');
+      if(!draggedFieldOption) return;
+      draggedFieldOption.classList.add('dragging');
+      event.dataTransfer.effectAllowed='move';
+      event.dataTransfer.setData('text/plain',draggedFieldOption.dataset.field);
+    });
+    fieldList.addEventListener('dragover',event=>{
+      if(!draggedFieldOption) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect='move';
+      const target=event.target.closest('.field-option');
+      if(!target||target===draggedFieldOption) return;
+      const rect=target.getBoundingClientRect();
+      const insertAfter=event.clientY>rect.top+rect.height/2;
+      fieldList.insertBefore(draggedFieldOption,insertAfter?target.nextSibling:target);
+    });
+    function finishFieldDrag() {
+      if(!draggedFieldOption) return;
+      draggedFieldOption.classList.remove('dragging');
+      draggedFieldOption=null;
+      syncSelectedFieldOrder();
+      render(lastEvents);
+    }
+    fieldList.addEventListener('drop',event=>{ event.preventDefault(); finishFieldDrag(); });
+    fieldList.addEventListener('dragend',finishFieldDrag);
+    fieldList.addEventListener('click',event=>{
+      const button=event.target.closest('.move-button');
+      if(!button) return;
+      const item=button.closest('.field-option');
+      const sibling=button.dataset.move==='up'?item.previousElementSibling:item.nextElementSibling;
+      if(!sibling) return;
+      if(button.dataset.move==='up') fieldList.insertBefore(item,sibling);
+      else fieldList.insertBefore(sibling,item);
+      syncSelectedFieldOrder();
+      render(lastEvents);
+    });
     previousPageButton.addEventListener('click',()=>{ if(currentPage>0) { currentPage-=1; renderPage(); } });
     nextPageButton.addEventListener('click',()=>{ if(currentPage<previewPages.length-1) { currentPage+=1; renderPage(); } });
     pageSelect.addEventListener('change',()=>{ currentPage=Number(pageSelect.value); renderPage(); });

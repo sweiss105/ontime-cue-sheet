@@ -30,7 +30,7 @@
 <body>
   <header><h1>{{ title }}</h1><div class="meta">Generated {{ generated_at }}<br>{{ events|length }} cues</div></header>
   <table>
-    <thead><tr><th class="cue">Cue</th><th class="time">Start</th><th class="duration">Duration</th><th class="title">Title</th>{% if include_notes %}<th>Notes</th>{% endif %}{% for field in selected_custom_fields %}<th>{{ field }}</th>{% endfor %}</tr></thead>
+    <thead><tr><th class="cue">Cue</th><th class="time">Start</th><th class="duration">Duration</th><th class="title">Title</th>{% for field in selected_fields %}<th>{{ field }}</th>{% endfor %}</tr></thead>
     <tbody>
     {% for event in events %}
       {% set row_colour = event.colour|cue_colour %}
@@ -39,8 +39,7 @@
         <td class="time">{{ event.timeStart|clock }}</td>
         <td class="duration">{{ event.duration|clock }}</td>
         <td class="title">{{ event.title }}</td>
-        {% if include_notes %}<td>{{ event.note }}</td>{% endif %}
-        {% for field in selected_custom_fields %}<td>{{ event.custom.get(field, "") if event.custom else "" }}</td>{% endfor %}
+        {% for field in selected_fields %}<td>{% if field == "Notes" %}{{ event.note }}{% else %}{{ event.custom.get(field, "") if event.custom else "" }}{% endif %}</td>{% endfor %}
       </tr>
     {% endfor %}
     </tbody>

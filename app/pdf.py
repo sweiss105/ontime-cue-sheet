@@ -51,6 +51,7 @@ def render_pdf(
     orientation: str = "landscape",
     include_notes: bool = True,
     selected_custom_fields: list[str] | None = None,
+    selected_fields: list[str] | None = None,
 ) -> bytes:
     if selected_custom_fields is None:
         selected_custom_fields = list(
@@ -61,12 +62,14 @@ def render_pdf(
                 for field in event["custom"]
             )
         )
+    if selected_fields is None:
+        selected_fields = (["Notes"] if include_notes else []) + selected_custom_fields
+    selected_fields = list(dict.fromkeys(selected_fields))
     html = env.get_template("cue_sheet.html").render(
         events=events,
         title=title.strip() or "Cue Sheet",
         generated_at=datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
-        include_notes=include_notes,
-        selected_custom_fields=selected_custom_fields,
+        selected_fields=selected_fields,
     )
     page_css = f"@page {{ size: {paper_size} {orientation}; }}"
     return HTML(string=html, base_url=str(TEMPLATES)).write_pdf(

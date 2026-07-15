@@ -71,6 +71,8 @@ async def generate(
     include_skipped: bool = Form(False),
     include_notes: bool = Form(False),
     selected_custom_fields: list[str] | None = Form(None),
+    fields_configured: bool = Form(False),
+    selected_fields: list[str] | None = Form(None),
 ) -> Response:
     try:
         rundown = await _get_rundown(base_url)
@@ -80,14 +82,25 @@ async def generate(
         safe_paper = paper_size if paper_size in {"Letter", "A4"} else "Letter"
         safe_orientation = orientation if orientation in {"portrait", "landscape"} else "landscape"
         allowed_fields = set(rundown["custom_fields"])
-        safe_fields = [field for field in (selected_custom_fields or []) if field in allowed_fields]
+        if fields_configured:
+            safe_fields = list(
+                dict.fromkeys(
+                    field
+                    for field in (selected_fields or [])
+                    if field == "Notes" or field in allowed_fields
+                )
+            )
+        else:
+            safe_custom_fields = [
+                field for field in (selected_custom_fields or []) if field in allowed_fields
+            ]
+            safe_fields = (["Notes"] if include_notes else []) + safe_custom_fields
         pdf = render_pdf(
             events,
             title,
             safe_paper,
             safe_orientation,
-            include_notes=include_notes,
-            selected_custom_fields=safe_fields,
+            selected_fields=safe_fields,
         )
     except OntimeError as exc:
         html = templates.get_template("index.html").render(base_url=base_url, error=str(exc))

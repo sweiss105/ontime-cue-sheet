@@ -171,6 +171,11 @@ def test_preview_returns_ontime_project_title_and_available_fields(monkeypatch):
 def test_index_includes_multipage_preview_controls():
     html = TestClient(app).get("/").text
 
+    assert '>Import Cues</button>' in html
+    assert 'class="field-option" draggable="true"' in html
+    assert 'name="selected_fields"' in html
+    assert "fieldList.addEventListener('dragstart'" in html
+    assert "function finishFieldDrag()" in html
     assert 'id="page-nav"' in html
     assert 'data-testid="previous-page"' in html
     assert 'data-testid="page-select"' in html
@@ -206,6 +211,32 @@ def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
     text = PdfReader(BytesIO(response.content)).pages[0].extract_text()
     assert response.status_code == 200
     assert all(header in text for header in ("NOTES", "AUDIO", "VIDEO"))
+
+
+def test_generate_preserves_dragged_field_order(monkeypatch):
+    async def fake_rundown(_base_url):
+        return {
+            "title": "WCTC Underestimated to Unstoppable",
+            "rundown_title": "Fall Kick Off 2026",
+            "events": [EVENT],
+            "custom_fields": ["Audio", "Video"],
+        }
+
+    monkeypatch.setattr("app.main._get_rundown", fake_rundown)
+    response = TestClient(app).post(
+        "/generate",
+        data={
+            "base_url": "https://example.com",
+            "title": "Fall Kick Off 2026",
+            "fields_configured": "true",
+            "selected_fields": ["Video", "Notes", "Audio"],
+        },
+    )
+
+    text = PdfReader(BytesIO(response.content)).pages[0].extract_text()
+    assert response.status_code == 200
+    assert text.index("VIDEO") < text.index("NOTES") < text.index("AUDIO")
+    assert all(value in text for value in ("Holding slide", "House opens", "Walk-in playlist"))
 
 
 def test_multipage_pdf_repeats_column_headers():
