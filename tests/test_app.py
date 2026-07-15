@@ -12,7 +12,7 @@ from app.ontime import (
     extract_rundown,
     validate_ontime_url,
 )
-from app.pdf import clock, cue_colour, cue_tint, env, render_pdf
+from app.pdf import clock, cue_colour, cue_tint, env, normalize_version_code, render_pdf
 
 
 EVENT = {
@@ -118,11 +118,20 @@ def test_clock_formats_milliseconds():
 
 
 def test_pdf_filename_uses_document_title_and_cuesheet_suffix():
-    assert pdf_filename("WCTC Underestimated to Unstoppable") == (
-        "WCTC Underestimated to Unstoppable-CUESHEET.pdf"
+    version = "20260715-1310"
+    assert pdf_filename("WCTC Underestimated to Unstoppable", version) == (
+        "WCTC Underestimated to Unstoppable-CUESHEET-20260715-1310.pdf"
     )
-    assert pdf_filename("  Show / Finale: 2026.pdf  ") == "Show - Finale- 2026-CUESHEET.pdf"
-    assert pdf_filename("Show-CUESHEET") == "Show-CUESHEET.pdf"
+    assert pdf_filename("  Show / Finale: 2026.pdf  ", version) == (
+        "Show - Finale- 2026-CUESHEET-20260715-1310.pdf"
+    )
+    assert pdf_filename("Show-CUESHEET", version) == "Show-CUESHEET-20260715-1310.pdf"
+
+
+def test_version_code_accepts_expected_format_and_replaces_invalid_values():
+    assert normalize_version_code("20260715-1310") == "20260715-1310"
+    assert normalize_version_code("unsafe") != "unsafe"
+    assert normalize_version_code("20261340-9999") != "20261340-9999"
 
 
 def test_render_pdf_has_pdf_signature():
@@ -251,8 +260,10 @@ def test_index_includes_multipage_preview_controls():
     assert "table.tHead.getBoundingClientRect().height" in html
     assert 'style="color:#000000;background-color:${cueTint(colour)}"' in html
     assert 'style="color:${colour};background-color:' not in html
-    assert "function pdfFilename(value)" in html
-    assert "link.download=pdfFilename(title.value)" in html
+    assert "function versionCode(date=new Date())" in html
+    assert "function pdfFilename(value,version)" in html
+    assert "data.set('version_code',version)" in html
+    assert "link.download=pdfFilename(title.value,version)" in html
     assert "link.download='cue-sheet.pdf'" not in html
 
 
@@ -272,6 +283,7 @@ def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
             "base_url": "https://example.com",
             "title": "Fall Kick Off 2026",
             "include_notes": "true",
+            "version_code": "20260715-1310",
             "selected_custom_fields": ["Audio", "Video"],
         },
     )
@@ -281,8 +293,10 @@ def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
     assert all(header in text for header in ("AUDIO", "VIDEO"))
     assert "NOTES" not in text
     assert "House opens" in text
+    assert "Generated 2026-07-15 13:10" in text
+    assert "20260715-1310" in text
     assert response.headers["content-disposition"].startswith(
-        'attachment; filename="Fall Kick Off 2026-CUESHEET.pdf";'
+        'attachment; filename="Fall Kick Off 2026-CUESHEET-20260715-1310.pdf";'
     )
 
 
@@ -314,15 +328,18 @@ def test_generate_preserves_dragged_field_order(monkeypatch):
     assert all(value in text for value in ("Holding slide", "House opens", "Walk-in playlist"))
 
 
-def test_multipage_pdf_repeats_column_headers():
+def test_multipage_pdf_repeats_column_headers_and_version_code():
     events = [
         {**EVENT, "id": f"evt-{index}", "cue": str(index), "title": f"Cue {index}"}
         for index in range(60)
     ]
-    pages = PdfReader(BytesIO(render_pdf(events, "Long Show Cue Sheet"))).pages
+    pages = PdfReader(
+        BytesIO(render_pdf(events, "Long Show Cue Sheet", version_code="20260715-1310"))
+    ).pages
 
     assert len(pages) > 1
     for page in pages:
         text = page.extract_text()
         assert all(header in text for header in ("CUE", "START", "DURATION", "TITLE", "AUDIO", "VIDEO"))
         assert "NOTES" not in text
+        assert "20260715-1310" in text

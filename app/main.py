@@ -11,14 +11,14 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .ontime import OntimeError, RundownData, fetch_current_rundown
-from .pdf import render_pdf
+from .pdf import normalize_version_code, render_pdf
 
 ROOT = Path(__file__).parent
 templates = Environment(loader=FileSystemLoader(ROOT / "templates"), autoescape=select_autoescape(["html"]))
 app = FastAPI(title="Ontime Cue Sheet")
 
 
-def pdf_filename(title: str) -> str:
+def pdf_filename(title: str, version_code: str = "") -> str:
     """Create a portable PDF filename from the editable document title."""
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "-", title)
     name = re.sub(r"\s+", " ", name).strip(" .")
@@ -27,7 +27,7 @@ def pdf_filename(title: str) -> str:
     if name.upper().endswith("-CUESHEET"):
         name = name[:-9].rstrip(" .")
     name = name[:120].rstrip(" .") or "cue-sheet"
-    return f"{name}-CUESHEET.pdf"
+    return f"{name}-CUESHEET-{normalize_version_code(version_code)}.pdf"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -88,6 +88,7 @@ async def generate(
     selected_custom_fields: list[str] | None = Form(None),
     fields_configured: bool = Form(False),
     selected_fields: list[str] | None = Form(None),
+    version_code: str = Form(""),
 ) -> Response:
     try:
         rundown = await _get_rundown(base_url)
@@ -112,6 +113,7 @@ async def generate(
                 field for field in (selected_custom_fields or []) if field in allowed_fields
             ]
             safe_fields = safe_custom_fields
+        safe_version_code = normalize_version_code(version_code)
         pdf = render_pdf(
             events,
             title,
@@ -119,10 +121,11 @@ async def generate(
             safe_orientation,
             include_notes=include_notes,
             selected_fields=safe_fields,
+            version_code=safe_version_code,
         )
     except OntimeError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=502)
-    filename = pdf_filename(title)
+    filename = pdf_filename(title, safe_version_code)
     ascii_stem = unicodedata.normalize("NFKD", filename[:-4]).encode("ascii", "ignore").decode()
     ascii_filename = f"{ascii_stem.strip(' .') or 'cue-sheet-CUESHEET'}.pdf"
     return Response(

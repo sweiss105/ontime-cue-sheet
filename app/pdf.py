@@ -25,6 +25,19 @@ def clock(value: Any) -> str:
 env.filters["clock"] = clock
 
 HEX_COLOUR = re.compile(r"^#([0-9a-fA-F]{6})$")
+VERSION_CODE = re.compile(r"^\d{8}-\d{4}$")
+
+
+def normalize_version_code(value: Any = None) -> str:
+    candidate = str(value or "").strip()
+    if VERSION_CODE.fullmatch(candidate):
+        try:
+            datetime.strptime(candidate, "%Y%m%d-%H%M")
+        except ValueError:
+            pass
+        else:
+            return candidate
+    return datetime.now().astimezone().strftime("%Y%m%d-%H%M")
 
 
 def cue_colour(value: Any) -> str:
@@ -52,6 +65,7 @@ def render_pdf(
     include_notes: bool = True,
     selected_custom_fields: list[str] | None = None,
     selected_fields: list[str] | None = None,
+    version_code: str | None = None,
 ) -> bytes:
     if selected_custom_fields is None:
         selected_custom_fields = list(
@@ -66,10 +80,12 @@ def render_pdf(
         selected_fields = selected_custom_fields
     include_notes = include_notes or "Notes" in selected_fields
     selected_fields = list(dict.fromkeys(field for field in selected_fields if field != "Notes"))
+    safe_version_code = normalize_version_code(version_code)
     html = env.get_template("cue_sheet.html").render(
         events=events,
         title=title.strip() or "Cue Sheet",
-        generated_at=datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
+        generated_at=datetime.strptime(safe_version_code, "%Y%m%d-%H%M").strftime("%Y-%m-%d %H:%M"),
+        version_code=safe_version_code,
         include_notes=include_notes,
         selected_fields=selected_fields,
     )

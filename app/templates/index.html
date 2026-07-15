@@ -148,10 +148,14 @@
     function clock(ms) { const s=Math.floor((Number(ms)||0)/1000), h=Math.floor(s/3600), m=Math.floor((s%3600)/60), r=s%60; return [h,m,r].map(v=>String(v).padStart(2,'0')).join(':'); }
     function showToast(message) { toast.textContent=message; toast.classList.add('show'); setTimeout(()=>toast.classList.remove('show'),3200); }
     function setBusy(busy) { testButton.disabled=busy; generateButton.disabled=busy; paper.classList.toggle('loading',busy); }
-    function pdfFilename(value) {
+    function versionCode(date=new Date()) {
+      const pad=value=>String(value).padStart(2,'0');
+      return `${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
+    }
+    function pdfFilename(value,version) {
       let name=String(value||'').replace(/[<>:"\/\\|?*\u0000-\u001F]/g,'-').replace(/\s+/g,' ').trim().replace(/[. ]+$/g,'');
       name=name.replace(/\.pdf$/i,'').replace(/[. ]+$/g,'').replace(/-CUESHEET$/i,'').replace(/[. ]+$/g,'').slice(0,120).replace(/[. ]+$/g,'');
-      return `${name||'cue-sheet'}-CUESHEET.pdf`;
+      return `${name||'cue-sheet'}-CUESHEET-${version}.pdf`;
     }
     function setStatus(state, heading, detail) {
       statusEl.dataset.state = state;
@@ -320,7 +324,7 @@
     document.querySelectorAll('input[name="orientation"]').forEach(el=>el.addEventListener('change',()=>{ paper.classList.toggle('portrait',el.value==='portrait'&&el.checked); schedulePagination(); }));
     document.querySelector('#include_skipped').addEventListener('change',()=>{ if(lastEvents.length) testButton.click(); });
     new ResizeObserver(schedulePagination).observe(paper);
-    form.addEventListener('submit',async event=>{ event.preventDefault(); if(!form.reportValidity()) return; setBusy(true); try { const response=await fetch('/generate',{method:'POST',body:buildData()}); if(!response.ok) throw new Error('PDF generation failed'); const blob=await response.blob(); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download=pdfFilename(title.value); link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); showToast('PDF cue sheet generated.'); } catch(error) { showToast(error.message); } finally { setBusy(false); } });
+    form.addEventListener('submit',async event=>{ event.preventDefault(); if(!form.reportValidity()) return; setBusy(true); try { const version=versionCode(); const data=buildData(); data.set('version_code',version); const response=await fetch('/generate',{method:'POST',body:data}); if(!response.ok) throw new Error('PDF generation failed'); const blob=await response.blob(); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download=pdfFilename(title.value,version); link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000); showToast('PDF cue sheet generated.'); } catch(error) { showToast(error.message); } finally { setBusy(false); } });
   </script>
 </body>
 </html>
