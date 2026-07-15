@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import os
+import re
+import unicodedata
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
@@ -13,6 +16,18 @@ from .pdf import render_pdf
 ROOT = Path(__file__).parent
 templates = Environment(loader=FileSystemLoader(ROOT / "templates"), autoescape=select_autoescape(["html"]))
 app = FastAPI(title="Ontime Cue Sheet")
+
+
+def pdf_filename(title: str) -> str:
+    """Create a portable PDF filename from the editable document title."""
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "-", title)
+    name = re.sub(r"\s+", " ", name).strip(" .")
+    if name.lower().endswith(".pdf"):
+        name = name[:-4].rstrip(" .")
+    if name.upper().endswith("-CUESHEET"):
+        name = name[:-9].rstrip(" .")
+    name = name[:120].rstrip(" .") or "cue-sheet"
+    return f"{name}-CUESHEET.pdf"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -107,11 +122,17 @@ async def generate(
         )
     except OntimeError as exc:
         return JSONResponse({"ok": False, "error": str(exc)}, status_code=502)
-    filename = "cue-sheet.pdf"
+    filename = pdf_filename(title)
+    ascii_stem = unicodedata.normalize("NFKD", filename[:-4]).encode("ascii", "ignore").decode()
+    ascii_filename = f"{ascii_stem.strip(' .') or 'cue-sheet-CUESHEET'}.pdf"
     return Response(
         pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{ascii_filename}"; filename*=UTF-8\'\'{quote(filename)}'
+            )
+        },
     )
 
 

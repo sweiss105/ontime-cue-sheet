@@ -3,7 +3,7 @@ from io import BytesIO
 from fastapi.testclient import TestClient
 from pypdf import PdfReader
 
-from app.main import app
+from app.main import app, pdf_filename
 from app.ontime import (
     OntimeError,
     build_project_url,
@@ -115,6 +115,14 @@ def test_public_importer_rejects_non_ontime_and_unsafe_urls():
 
 def test_clock_formats_milliseconds():
     assert clock(36_061_000) == "10:01:01"
+
+
+def test_pdf_filename_uses_document_title_and_cuesheet_suffix():
+    assert pdf_filename("WCTC Underestimated to Unstoppable") == (
+        "WCTC Underestimated to Unstoppable-CUESHEET.pdf"
+    )
+    assert pdf_filename("  Show / Finale: 2026.pdf  ") == "Show - Finale- 2026-CUESHEET.pdf"
+    assert pdf_filename("Show-CUESHEET") == "Show-CUESHEET.pdf"
 
 
 def test_render_pdf_has_pdf_signature():
@@ -243,6 +251,9 @@ def test_index_includes_multipage_preview_controls():
     assert "table.tHead.getBoundingClientRect().height" in html
     assert 'style="color:#000000;background-color:${cueTint(colour)}"' in html
     assert 'style="color:${colour};background-color:' not in html
+    assert "function pdfFilename(value)" in html
+    assert "link.download=pdfFilename(title.value)" in html
+    assert "link.download='cue-sheet.pdf'" not in html
 
 
 def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
@@ -270,6 +281,9 @@ def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
     assert all(header in text for header in ("AUDIO", "VIDEO"))
     assert "NOTES" not in text
     assert "House opens" in text
+    assert response.headers["content-disposition"].startswith(
+        'attachment; filename="Fall Kick Off 2026-CUESHEET.pdf";'
+    )
 
 
 def test_generate_preserves_dragged_field_order(monkeypatch):
