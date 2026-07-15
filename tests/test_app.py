@@ -76,6 +76,15 @@ def test_render_pdf_supports_a4_portrait():
     assert render_pdf([EVENT], "Show Cue Sheet", "A4", "portrait").startswith(b"%PDF")
 
 
+def test_pdf_and_preview_use_quarter_inch_sheet_margins():
+    pdf_template, _, _ = env.loader.get_source(env, "cue_sheet.html")
+    index_html = TestClient(app).get("/").text
+
+    assert "@page { margin: 0.25in;" in pdf_template
+    assert "body { margin: 0;" in pdf_template
+    assert "aspect-ratio:11/8.5; padding:24px;" in index_html
+
+
 def test_cue_colour_and_tint_are_print_safe():
     assert cue_colour("#339e4e") == "#339E4E"
     assert cue_tint("#339E4E") == "rgba(51, 158, 78, 0.15)"
