@@ -83,23 +83,26 @@ async def generate(
         safe_orientation = orientation if orientation in {"portrait", "landscape"} else "landscape"
         allowed_fields = set(rundown["custom_fields"])
         if fields_configured:
+            requested_fields = selected_fields or []
+            include_notes = include_notes or "Notes" in requested_fields
             safe_fields = list(
                 dict.fromkeys(
                     field
-                    for field in (selected_fields or [])
-                    if field == "Notes" or field in allowed_fields
+                    for field in requested_fields
+                    if field != "Notes" and field in allowed_fields
                 )
             )
         else:
             safe_custom_fields = [
                 field for field in (selected_custom_fields or []) if field in allowed_fields
             ]
-            safe_fields = (["Notes"] if include_notes else []) + safe_custom_fields
+            safe_fields = safe_custom_fields
         pdf = render_pdf(
             events,
             title,
             safe_paper,
             safe_orientation,
+            include_notes=include_notes,
             selected_fields=safe_fields,
         )
     except OntimeError as exc:

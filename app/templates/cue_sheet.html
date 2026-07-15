@@ -21,6 +21,7 @@
     .cue { font-weight: bold; }
     .time, .duration { font-variant-numeric: tabular-nums; }
     .title { font-weight: 650; }
+    .cue-note { margin-top: 2px; color: #505659; font-size: 7pt; font-style: italic; font-weight: normal; line-height: 1.25; }
     .skipped { opacity: .48; text-decoration: line-through; }
     dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 6px; }
     dt { font-weight: bold; }
@@ -38,8 +39,8 @@
         <td class="cue">{{ event.cue or "—" }}</td>
         <td class="time">{{ event.timeStart|clock }}</td>
         <td class="duration">{{ event.duration|clock }}</td>
-        <td class="title">{{ event.title }}</td>
-        {% for field in selected_fields %}<td>{% if field == "Notes" %}{{ event.note }}{% else %}{{ event.custom.get(field, "") if event.custom else "" }}{% endif %}</td>{% endfor %}
+        <td class="title"><div>{{ event.title }}</div>{% if include_notes and event.note %}<div class="cue-note">{{ event.note }}</div>{% endif %}</td>
+        {% for field in selected_fields %}<td>{{ event.custom.get(field, "") if event.custom else "" }}</td>{% endfor %}
       </tr>
     {% endfor %}
     </tbody>

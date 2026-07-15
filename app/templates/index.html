@@ -42,6 +42,7 @@
     .field-picker { margin:4px 0 20px; padding:16px 0 18px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
     .field-picker h3 { margin:0 0 4px; font-size:14px; }
     .field-picker p { margin:0 0 14px; color:var(--muted); font-size:12px; }
+    .field-picker .notes-option { margin:0 0 14px; }
     .field-list { display:grid; gap:6px; }
     .field-option { min-height:42px; display:grid; grid-template-columns:26px minmax(0,1fr) auto; align-items:center; gap:6px; padding:4px 5px 4px 8px; background:#fff; border:1px solid #c7ccce; border-radius:3px; cursor:grab; transition:border-color .15s ease, box-shadow .15s ease, opacity .15s ease; }
     .field-option:hover { border-color:#858b8d; }
@@ -80,6 +81,7 @@
     td { padding:8px; vertical-align:top; border-bottom:1px solid #d9ddde; overflow-wrap:anywhere; }
     tbody tr:nth-child(even) td { background-color:rgba(255,255,255,.05); }
     .col-cue, .col-time, .col-duration { width:1%; padding-left:5px; padding-right:5px; white-space:nowrap; }
+    .cue-note { display:block; margin-top:3px; color:#505659; font-size:10px; font-style:italic; font-weight:400; line-height:1.3; }
     .empty { height:470px; display:grid; place-items:center; text-align:center; color:var(--muted); }
     .empty strong { display:block; margin-bottom:8px; color:var(--ink); font-size:17px; }
     .loading { opacity:.48; }
@@ -102,7 +104,7 @@
       <section class="section">
         <h2>Document settings</h2>
         <div class="field"><label for="title">Document title</label><input type="text" id="title" name="title" value="Cue Sheet" required></div>
-        <div class="field-picker" id="field-picker" hidden><h3>PDF fields</h3><p>Choose fields, then drag them to set their cue-sheet order.</p><div class="field-list" id="field-list"><div class="field-option" draggable="true" data-field="Notes"><span class="drag-handle" aria-hidden="true">⋮⋮</span><label class="check"><input type="checkbox" id="include_notes" name="include_notes" value="true" checked><span>Notes</span></label><span class="move-buttons"><button class="move-button" type="button" data-move="up" aria-label="Move Notes up">↑</button><button class="move-button" type="button" data-move="down" aria-label="Move Notes down">↓</button></span></div></div><div id="selected-field-order"><input type="hidden" name="fields_configured" value="true"><input type="hidden" name="selected_fields" value="Notes"></div></div>
+        <div class="field-picker" id="field-picker" hidden><h3>PDF fields</h3><p>Choose custom columns, then drag them to set their cue-sheet order.</p><label class="check notes-option"><input type="checkbox" id="include_notes" name="include_notes" value="true" checked><span>Cue notes under titles</span></label><div class="field-list" id="field-list"></div><div id="selected-field-order"><input type="hidden" name="fields_configured" value="true"></div></div>
         <div class="field"><label for="paper_size">Paper size</label><select id="paper_size" name="paper_size"><option value="Letter">US Letter (8.5 × 11 in)</option><option value="A4">A4 (210 × 297 mm)</option></select></div>
         <fieldset class="field" style="border:0;padding:0"><legend style="margin-bottom:8px">Orientation</legend><div class="segmented"><label><input type="radio" name="orientation" value="portrait">Portrait</label><label><input type="radio" name="orientation" value="landscape" checked>Landscape</label></div></fieldset>
         <label class="check"><input type="checkbox" id="include_skipped" name="include_skipped" value="true">Include skipped cues</label>
@@ -159,8 +161,7 @@
     function selectedFields() { return fieldItems().filter(item=>item.querySelector('input').checked).map(item=>item.dataset.field); }
     function fieldOption(field, checked=false) {
       const attribute=escapeAttribute(field);
-      const isNotes=field==='Notes';
-      return `<div class="field-option" draggable="true" data-field="${attribute}"><span class="drag-handle" aria-hidden="true">⋮⋮</span><label class="check"><input type="checkbox"${isNotes?' id="include_notes" name="include_notes" value="true"':` name="selected_custom_fields" value="${attribute}"`}${checked?' checked':''}><span>${escapeHtml(field)}</span></label><span class="move-buttons"><button class="move-button" type="button" data-move="up" aria-label="Move ${attribute} up">↑</button><button class="move-button" type="button" data-move="down" aria-label="Move ${attribute} down">↓</button></span></div>`;
+      return `<div class="field-option" draggable="true" data-field="${attribute}"><span class="drag-handle" aria-hidden="true">⋮⋮</span><label class="check"><input type="checkbox" name="selected_custom_fields" value="${attribute}"${checked?' checked':''}><span>${escapeHtml(field)}</span></label><span class="move-buttons"><button class="move-button" type="button" data-move="up" aria-label="Move ${attribute} up">↑</button><button class="move-button" type="button" data-move="down" aria-label="Move ${attribute} down">↓</button></span></div>`;
     }
     function syncSelectedFieldOrder() {
       selectedFieldOrder.innerHTML='<input type="hidden" name="fields_configured" value="true">';
@@ -179,9 +180,9 @@
       const previousOrder=fieldItems().map(item=>item.dataset.field);
       const previousSelected=new Set(selectedFields());
       const firstLoad=fieldPicker.hidden;
-      const available=['Notes',...fields.filter(field=>field!=='Notes')];
+      const available=fields.filter(field=>field!=='Notes');
       const order=[...previousOrder.filter(field=>available.includes(field)),...available.filter(field=>!previousOrder.includes(field))];
-      fieldList.innerHTML=order.map(field=>fieldOption(field,firstLoad?field==='Notes':previousSelected.has(field))).join('');
+      fieldList.innerHTML=order.map(field=>fieldOption(field,!firstLoad&&previousSelected.has(field))).join('');
       fieldPicker.hidden=false;
       syncSelectedFieldOrder();
     }
@@ -190,8 +191,9 @@
     }
     function eventRow(e) {
       const colour=cueColour(e.colour); const style=colour?` style="color:#000000;background-color:${cueTint(colour)}"`:'';
-      const extra=selectedFields().map(field=>field==='Notes'?(e.note||''):(e.custom?.[field]||''));
-      return `<tr${style}><td class="col-cue">${escapeHtml(e.cue||'—')}</td><td class="col-time">${clock(e.timeStart)}</td><td class="col-duration">${clock(e.duration)}</td><td class="col-title"><strong>${escapeHtml(e.title||'')}</strong></td>${extra.map(value=>`<td class="col-content">${escapeHtml(value)}</td>`).join('')}</tr>`;
+      const note=document.querySelector('#include_notes').checked&&e.note?`<span class="cue-note">${escapeHtml(e.note)}</span>`:'';
+      const extra=selectedFields().map(field=>e.custom?.[field]||'');
+      return `<tr${style}><td class="col-cue">${escapeHtml(e.cue||'—')}</td><td class="col-time">${clock(e.timeStart)}</td><td class="col-duration">${clock(e.duration)}</td><td class="col-title"><strong>${escapeHtml(e.title||'')}</strong>${note}</td>${extra.map(value=>`<td class="col-content">${escapeHtml(value)}</td>`).join('')}</tr>`;
     }
     function setColumnWidths(widths=[]) {
       table.querySelector('colgroup')?.remove();

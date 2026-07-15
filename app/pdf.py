@@ -63,12 +63,14 @@ def render_pdf(
             )
         )
     if selected_fields is None:
-        selected_fields = (["Notes"] if include_notes else []) + selected_custom_fields
-    selected_fields = list(dict.fromkeys(selected_fields))
+        selected_fields = selected_custom_fields
+    include_notes = include_notes or "Notes" in selected_fields
+    selected_fields = list(dict.fromkeys(field for field in selected_fields if field != "Notes"))
     html = env.get_template("cue_sheet.html").render(
         events=events,
         title=title.strip() or "Cue Sheet",
         generated_at=datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
+        include_notes=include_notes,
         selected_fields=selected_fields,
     )
     page_css = f"@page {{ size: {paper_size} {orientation}; }}"

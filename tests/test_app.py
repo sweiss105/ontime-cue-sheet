@@ -139,11 +139,29 @@ def test_pdf_rows_use_black_text_with_colour_tint():
         title="Colour test",
         generated_at="",
         include_notes=True,
-        selected_custom_fields=[],
+        selected_fields=[],
     )
 
     assert 'style="color:#000000; background-color:rgba(51, 158, 78, 0.15)"' in html
     assert 'style="color:#339E4E;' not in html
+
+
+def test_cue_notes_render_under_title_in_smaller_italic_text():
+    html = env.get_template("cue_sheet.html").render(
+        events=[EVENT],
+        title="Notes test",
+        generated_at="",
+        include_notes=True,
+        selected_fields=[],
+    )
+    index_html = TestClient(app).get("/").text
+
+    assert '<td class="title"><div>Doors</div><div class="cue-note">House opens</div></td>' in html
+    assert '<th>Notes</th>' not in html
+    assert "font-size: 7pt; font-style: italic;" in html
+    assert "Cue notes under titles" in index_html
+    assert 'data-field="Notes"' not in index_html
+    assert 'class="cue-note"' in index_html
 
 
 def test_pdf_only_contains_selected_custom_fields():
@@ -183,7 +201,7 @@ def test_index_includes_multipage_preview_controls():
 
     assert '>Import Cues</button>' in html
     assert 'class="field-option" draggable="true"' in html
-    assert 'name="selected_fields"' in html
+    assert "input.name='selected_fields'" in html
     assert "fieldList.addEventListener('dragstart'" in html
     assert "function finishFieldDrag()" in html
     assert 'id="page-nav"' in html
@@ -220,7 +238,9 @@ def test_generate_accepts_repeated_selected_custom_fields(monkeypatch):
 
     text = PdfReader(BytesIO(response.content)).pages[0].extract_text()
     assert response.status_code == 200
-    assert all(header in text for header in ("NOTES", "AUDIO", "VIDEO"))
+    assert all(header in text for header in ("AUDIO", "VIDEO"))
+    assert "NOTES" not in text
+    assert "House opens" in text
 
 
 def test_generate_preserves_dragged_field_order(monkeypatch):
@@ -239,13 +259,15 @@ def test_generate_preserves_dragged_field_order(monkeypatch):
             "base_url": "https://example.com",
             "title": "Fall Kick Off 2026",
             "fields_configured": "true",
-            "selected_fields": ["Video", "Notes", "Audio"],
+            "include_notes": "true",
+            "selected_fields": ["Video", "Audio"],
         },
     )
 
     text = PdfReader(BytesIO(response.content)).pages[0].extract_text()
     assert response.status_code == 200
-    assert text.index("VIDEO") < text.index("NOTES") < text.index("AUDIO")
+    assert text.index("VIDEO") < text.index("AUDIO")
+    assert "NOTES" not in text
     assert all(value in text for value in ("Holding slide", "House opens", "Walk-in playlist"))
 
 
@@ -259,4 +281,5 @@ def test_multipage_pdf_repeats_column_headers():
     assert len(pages) > 1
     for page in pages:
         text = page.extract_text()
-        assert all(header in text for header in ("CUE", "START", "DURATION", "TITLE", "NOTES", "AUDIO", "VIDEO"))
+        assert all(header in text for header in ("CUE", "START", "DURATION", "TITLE", "AUDIO", "VIDEO"))
+        assert "NOTES" not in text
