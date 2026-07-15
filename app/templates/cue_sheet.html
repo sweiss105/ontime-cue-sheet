@@ -10,7 +10,9 @@
     h1 { margin: 0; font-size: 22pt; letter-spacing: -.03em; }
     .meta { text-align: right; color: #555; font-size: 8pt; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    thead { display: table-header-group; }
+    /* WeasyPrint repeats table-header groups at the top of every printed page. */
+    thead { display: table-header-group; break-inside: avoid; }
+    tbody { display: table-row-group; }
     tr { break-inside: avoid; }
     th { background: #1d2326; color: white; text-align: left; text-transform: uppercase; letter-spacing: .05em; font-size: 7pt; padding: 7px 6px; }
     td { border-bottom: 1px solid #cfd3d5; padding: 7px 6px; vertical-align: top; overflow-wrap: anywhere; }

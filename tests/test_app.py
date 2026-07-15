@@ -1,3 +1,7 @@
+from io import BytesIO
+
+from pypdf import PdfReader
+
 from app.ontime import build_rundown_url, extract_events
 from app.pdf import clock, render_pdf
 
@@ -55,3 +59,16 @@ def test_render_pdf_has_pdf_signature():
 
 def test_render_pdf_supports_a4_portrait():
     assert render_pdf([EVENT], "Show Cue Sheet", "A4", "portrait").startswith(b"%PDF")
+
+
+def test_multipage_pdf_repeats_column_headers():
+    events = [
+        {**EVENT, "id": f"evt-{index}", "cue": str(index), "title": f"Cue {index}"}
+        for index in range(60)
+    ]
+    pages = PdfReader(BytesIO(render_pdf(events, "Long Show Cue Sheet"))).pages
+
+    assert len(pages) > 1
+    for page in pages:
+        text = page.extract_text()
+        assert all(header in text for header in ("CUE", "START", "DURATION", "TITLE", "NOTES", "CUSTOM FIELDS"))
