@@ -6,49 +6,65 @@ Ontime Cue Sheet is licensed under the Zero-Clause BSD license (`0BSD`). The fol
 
 | Component | License | Project |
 | --- | --- | --- |
-| FastAPI | MIT | <https://github.com/fastapi/fastapi> |
-| HTTPX | BSD 3-Clause | <https://github.com/encode/httpx> |
-| Jinja | BSD 3-Clause | <https://github.com/pallets/jinja> |
-| python-multipart | Apache License 2.0 | <https://github.com/Kludex/python-multipart> |
-| Uvicorn | BSD 3-Clause | <https://github.com/encode/uvicorn> |
-| WeasyPrint | BSD 3-Clause | <https://github.com/Kozea/WeasyPrint> |
+| Netlify Functions | MIT | <https://github.com/netlify/functions> |
+| PDFMake | MIT | <https://github.com/bpampuch/pdfmake> |
+| PDFKit (PDFMake dependency) | MIT | <https://github.com/foliojs/pdfkit> |
+| Roboto fonts | Apache License 2.0 | <https://github.com/googlefonts/roboto-3-classic> |
 
 ## PDF rendering components
 
-WeasyPrint uses additional Python and native rendering dependencies. The project's container builds install Pango from Debian packages. These components remain under their own licenses; installed distributions and container packages include their applicable copyright and license information.
+PDFMake uses PDFKit and embedded Roboto fonts when it lays out a cue sheet. These components remain under their own licenses, and installed packages include their applicable copyright and license information.
 
-- WeasyPrint dependency information: <https://doc.courtbouillon.org/weasyprint/stable/first_steps.html>
-- Pango source and licensing: <https://gitlab.gnome.org/GNOME/pango>
-- Python container image licensing: <https://hub.docker.com/_/python>
+- PDFMake dependency information: <https://github.com/bpampuch/pdfmake/blob/master/package.json>
+- PDFKit dependency information: <https://github.com/foliojs/pdfkit/blob/master/package.json>
+- Roboto Apache 2.0 license: [THIRD_PARTY_LICENSES/Roboto-APACHE-2.0.txt](THIRD_PARTY_LICENSES/Roboto-APACHE-2.0.txt)
+- Netlify Functions source and licensing: <https://github.com/netlify/functions>
 
-## WeasyPrint license
+## PDFMake license
 
-BSD 3-Clause License
+The MIT License (MIT)
 
-Copyright (c) 2011-2021, Simon Sapin and contributors.
-All rights reserved.
+Copyright (c) 2014-2015 bpampuch
+              2016-2026 liborm85
 
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-* Neither the name of the copyright holder nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
+## PDFKit license
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+MIT LICENSE
+
+Copyright (c) 2014 Devon Govett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
