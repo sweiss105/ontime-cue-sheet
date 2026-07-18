@@ -1,6 +1,6 @@
 # Ontime Cue Sheet
 
-A small Python/FastAPI web app that reads the current rundown from an Ontime stage and renders a printable PDF cue sheet with WeasyPrint.
+A Netlify-hosted web app that reads the current rundown from an Ontime stage and renders a printable PDF cue sheet with PDFMake.
 
 After importing cues, the app uses the Ontime project title for the cue-sheet header, lists every discovered custom field, and lets the user choose and drag the optional PDF fields into their desired column order. Cue notes can be included directly beneath each title in smaller italic text. If project metadata is unavailable, the current rundown title is used as a fallback. Cue, Start, Duration, and Title remain fixed on the left; Cue, Start, and Duration stay compact while the remaining columns size themselves from their content. Cue text is black, with the event colour applied to the row background at 15% opacity and a 5% white overlay on alternating rows for easier scanning. PDFs use quarter-inch page margins. The browser preview measures the selected columns and wrapped row content so each sheet fills before the next page begins; long PDFs repeat the column headers on every page. Every generated sheet carries a local-time version code in the lower-right footer and uses the same value in filenames such as `Project Name-CUESHEET-20260715-1310.pdf`.
 
@@ -10,41 +10,37 @@ This is an early MVP. It uses Ontime's documented read-only `GET /data/rundowns/
 
 ## Run locally
 
-WeasyPrint requires native libraries. On macOS, install WeasyPrint's system dependencies first, then:
+Install Node.js 22 or newer and the Netlify CLI, then:
 
 ```sh
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
-uvicorn app.main:app --reload
+npm install
+npm run dev
 ```
 
-Open `http://127.0.0.1:8000`.
+The Netlify CLI prints the local URL, normally `http://localhost:8888`.
 
-Or run the container:
+Run the automated build and PDF smoke test with:
 
 ```sh
-docker build -t ontime-cue-sheet .
-docker run --rm -p 8000:8000 --env-file .env ontime-cue-sheet
+npm run build
 ```
 
-## Deploy to Vercel
+## Deploy to Netlify
 
-The Vercel deployment uses `Dockerfile.vercel` so WeasyPrint's native Pango and font dependencies are installed in the runtime image. The server reads Vercel's `PORT` environment variable automatically.
+The repository is configured for Netlify continuous deployment in `netlify.toml`. The interface is served from `public/`; cue import and PDF generation run in Netlify Functions.
 
 ```sh
-vercel login
-vercel link
-vercel deploy
+netlify login
+netlify link
+netlify deploy
 ```
 
-Use the generated Vercel URL to verify the homepage, `/health`, live cue import, and PDF generation before assigning a custom domain. Do not store an authenticated Ontime Companion URL in Vercel environment variables.
+Use the generated deploy URL to verify the homepage, `/health`, live cue import, and PDF generation before assigning a custom domain. Production releases should be made through the connected Git repository or with `netlify deploy --prod` after a successful draft deploy. Do not store an authenticated Ontime Companion URL in Netlify environment variables.
 
 ## Configuration
 
-Copy `.env.example` to `.env` for local configuration.
+Copy `.env.example` to `.env` only if the Ontime stage requires a server-side authorization header.
 
-- `ONTIME_BASE_URL`: default stage URL shown in the form
 - `ONTIME_AUTH_HEADER`: optional header name, such as `Authorization`
 - `ONTIME_AUTH_VALUE`: optional complete header value, such as `Bearer …`
 
@@ -64,7 +60,7 @@ Ontime Cue Sheet is licensed under the [Zero-Clause BSD license](LICENSE), ident
 
 Attribution to [Steve Weiss](AUTHORS.md) is appreciated but not required. The software is provided "AS IS," without warranty, and the author disclaims liability as stated in the license.
 
-WeasyPrint and the project's other dependencies remain under their respective licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution and licensing details.
+PDFMake and the project's other dependencies remain under their respective licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for attribution and licensing details.
 
 ## AI-assisted development disclaimer
 

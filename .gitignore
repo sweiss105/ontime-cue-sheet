@@ -1,12 +1,16 @@
 .DS_Store
 .env
+.env.*
+!.env.example
 .venv/
 __pycache__/
 .pytest_cache/
 *.py[cod]
 *.pdf
 *.egg-info/
-.vercel
+node_modules/
+.netlify/
+.vercel/
 /tmp/
 /build/
 .env*

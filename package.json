@@ -1,0 +1,23 @@
+{
+  "name": "ontime-cue-sheet",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Generate printable PDF cue sheets from an Ontime rundown.",
+  "license": "0BSD",
+  "type": "module",
+  "engines": {
+    "node": ">=22 <25"
+  },
+  "scripts": {
+    "build": "npm test && node scripts/verify-build.mjs",
+    "dev": "netlify dev",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@netlify/functions": "^5.3.0",
+    "pdfmake": "^0.3.11"
+  },
+  "devDependencies": {
+    "pdfjs-dist": "^6.1.200"
+  }
+}
